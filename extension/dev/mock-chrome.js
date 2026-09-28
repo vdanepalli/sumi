@@ -1,30 +1,33 @@
-// Dev-only stand-in for the chrome.* APIs so the pages can be previewed in a normal
-// browser (python3 -m http.server, then open /dev/preview.html). Not shipped.
+// Dev-only stand-in for chrome.* so pages can be previewed in a normal browser:
+//   python3 -m http.server -d extension 8820  ->  http://localhost:8820/dev/preview.html
 (function () {
   const now = Date.now(), day = 86400000;
   const dk = n => { const d = new Date(now - n * day); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
-  const usage = {}; for (let i = 0; i < 7; i++) usage[dk(i)] = { 'github.com': 3600 + i * 400, 'stackoverflow.com': 1800, 'youtube.com': 2400 - i * 200, 'docs.python.org': 900, 'claude.ai': 2700, 'mail.google.com': 600, 'news.ycombinator.com': 500 };
-  const focusLog = {}; [0,1,2,4,5].forEach((i, k) => focusLog[dk(i)] = { count: 3 + k % 3, minutes: 75 + k * 20 });
-  const v = (term, kind, box, pos, d, e) => ({ id: term, term, kind, box, due: now - (box < 2 ? 1 : -day * box), created: now - box * day, phonetic: kind === 'word' ? '/ˈsʌm/' : '', meanings: [{ pos, defs: [{ d, e }], syn: [] }], lookups: 1 + (box % 3), reviews: box * 2 });
-  const vocab = {}; [
-    v('ephemeral','word',1,'adjective','Lasting a very short time.','Fame in the digital age is ephemeral.'),
-    v('break the ice','idiom',0,'verb','To start to get to know people and ease tension.',''),
-    v('laconic','word',5,'adjective','Using very few words.','His laconic reply ended the debate.'),
-    v('ubiquitous','word',3,'adjective','Present, appearing, or found everywhere.',''),
-    v('under the weather','idiom',2,'adjective','Ill or gloomy, especially from a cold.',''),
-    v('serendipity','word',6,'noun','The occurrence of events by chance in a happy way.','')
-  ].forEach(x => vocab[x.id] = x);
-  const sessions = { a: { id: 'a', name: 'Research: Rust async', created: now - day, tabs: Array(9).fill({ url: 'https://docs.rs' }) }, b: { id: 'b', name: 'Trip planning', created: now - 3*day, tabs: Array(5).fill({ url: 'https://maps.google.com' }) } };
-  const local = { usage, focusLog, vocab, sessions, timer: { mode: 'focus', running: true, remaining: 0, total: 25*60000, endsAt: now + 14*60000 + 37000, cycle: 2 } };
-  const tabs = ['GitHub - anthropics/claude-code|https://github.com/anthropics/claude-code','Pull requests · github|https://github.com/pulls','python - How to merge dicts - Stack Overflow|https://stackoverflow.com/q/38987','Rust async book|https://rust-lang.github.io/async-book/','YouTube|https://www.youtube.com/','YouTube|https://www.youtube.com/','Gmail - Inbox|https://mail.google.com/mail/u/0/','Hacker News|https://news.ycombinator.com/','Claude|https://claude.ai/new','3.13 Documentation|https://docs.python.org/3/']
-    .map((s, i) => { const [title, url] = s.split('|'); return { id: i + 1, windowId: i < 6 ? 1 : 2, title, url, active: i === 0, pinned: false, lastAccessed: now - i * day * 0.8, discarded: i === 7, groupId: -1, favIconUrl: '' }; });
-  const store = obj => ({ get: async k => k == null ? { ...obj } : (typeof k === 'string' ? (k in obj ? { [k]: obj[k] } : {}) : {}), set: async o => Object.assign(obj, o), remove: async k => { delete obj[k]; } });
-  const ev = { addListener() {} };
+  const sites = ['github.com','stackoverflow.com','youtube.com','docs.python.org','claude.ai','mail.google.com','news.ycombinator.com','notion.so','figma.com','linkedin.com'];
+  const usage = {}; for (let i = 0; i < 120; i++) { if (i % 9 === 8) continue; usage[dk(i)] = {}; sites.forEach((s, k) => { usage[dk(i)][s] = Math.round((5 - k / 2.5) * 600 * (0.5 + ((i * 7 + k * 13) % 10) / 10)); }); }
+  const focusLog = {}; for (let i = 0; i < 30; i++) if (i % 4 !== 3) focusLog[dk(i)] = { count: 2 + i % 4, minutes: 50 + (i * 17) % 110 };
+  const rec = (o) => ({ ...o, updatedAt: now });
+  const spaces = { s1: rec({ id: 's1', name: 'Work', order: 0 }), s2: rec({ id: 's2', name: 'Learning', order: 1 }), s3: rec({ id: 's3', name: 'Personal', order: 2 }) };
+  const cols = [['c1','s1','Sprint 42 — API redesign'],['c2','s1','Code review queue'],['c3','s1','Design references'],['c4','s2','Rust async']];
+  const collections = {}; cols.forEach(([id, sp, name], i) => collections[id] = rec({ id, spaceId: sp, name, order: i, collapsed: false }));
+  const cardData = { c1: [['OpenAPI spec draft','https://github.com/acme/api/pull/412'],['REST vs gRPC tradeoffs','https://cloud.google.com/blog/products/api-management'],['Pagination patterns','https://stackoverflow.com/questions/13872273'],['Rate limiting design','https://stripe.com/blog/rate-limiters'],['Idempotency keys','https://brandur.org/idempotency-keys']],
+    c2: [['PR #418 auth middleware','https://github.com/acme/api/pull/418'],['PR #421 retries','https://github.com/acme/api/pull/421']],
+    c3: [['Linear changelog','https://linear.app/changelog'],['Vercel dashboard','https://vercel.com/dashboard'],['Raycast','https://www.raycast.com/']],
+    c4: [['Async book','https://rust-lang.github.io/async-book/'],['Tokio tutorial','https://tokio.rs/tokio/tutorial']] };
+  const cards = {}; Object.entries(cardData).forEach(([c, list]) => list.forEach(([title, url], i) => { const id = c + i; cards[id] = rec({ id, collectionId: c, title, url, note: i === 0 && c === 'c1' ? 'Discuss Thursday' : '', order: i }); }));
+  const tasks = {}; [['Review PR #418', false, true], ['Write API migration notes', false, false], ['Book dentist', true, false]].forEach(([text, done, high], i) => tasks['t' + i] = rec({ id: 't' + i, text, done, high, order: i }));
+  const local = { usage, focusLog, spaces, collections, cards, tasks, account: { email: 'you@gmail.com', name: 'You' }, deviceId: 'dev1', lastSpace: 's1',
+    timer: { mode: 'focus', running: true, remaining: 0, total: 25*60000, endsAt: now + 14*60000 + 37000, cycle: 2 },
+    stopwatch: { running: true, startedAt: now - 47*60000, elapsed: 0, laps: [12*60000, 31*60000], label: 'API design' }, stopwatchLog: { [dk(0)]: [{ ms: 52*60000, label: 'Reading', at: now - 3*3600000 }] } };
+  const tabs = ['GitHub - acme/api|https://github.com/acme/api','PR #418 · acme/api|https://github.com/acme/api/pull/418','How to paginate - Stack Overflow|https://stackoverflow.com/q/1','YouTube|https://www.youtube.com/','YouTube|https://www.youtube.com/','Gmail|https://mail.google.com/','Hacker News|https://news.ycombinator.com/','Claude|https://claude.ai/new']
+    .map((s, i) => { const [title, url] = s.split('|'); return { id: i + 1, windowId: i < 5 ? 1 : 2, title, url, active: i === 0, pinned: false, lastAccessed: now - i * day, discarded: i === 6, groupId: -1, favIconUrl: '' }; });
+  const store = obj => ({ get: async k => k == null ? { ...obj } : Array.isArray(k) ? Object.fromEntries(k.filter(x => x in obj).map(x => [x, obj[x]])) : (k in obj ? { [k]: obj[k] } : {}), set: async o => Object.assign(obj, o), remove: async k => { delete obj[k]; } });
+  const ev = { addListener() {}, removeListener() {} };
   window.chrome = {
     storage: { local: store(local), sync: store({}), session: store({}), onChanged: ev },
-    runtime: { sendMessage: (m, cb) => cb({ ok: true, data: m.type === 'timer' ? local.timer : true }), getManifest: () => ({ oauth2: { client_id: 'REPLACE_' } }), getURL: p => p },
-    tabs: { query: async () => tabs, getCurrent: async () => null, onCreated: ev, onRemoved: ev, update: async () => {}, remove: async () => {} },
-    windows: { update: async () => {}, getCurrent: async () => ({ id: 1 }) },
+    runtime: { sendMessage: (m, cb) => cb({ ok: true, data: m.type === 'timer' ? local.timer : m.type === 'stopwatch' ? local.stopwatch : true }), getManifest: () => ({ oauth2: { client_id: 'x.apps.googleusercontent.com' } }), getURL: p => p, lastError: null },
+    tabs: { query: async () => tabs, getCurrent: async () => null, update: async () => {}, remove: async () => {}, create: async () => {}, onCreated: ev, onRemoved: ev, onUpdated: ev, onMoved: ev, onAttached: ev },
+    windows: { update: async () => {}, getCurrent: async () => ({ id: 1 }), create: async () => {} },
     identity: {}, alarms: {}, action: {}
   };
 })();

@@ -2,43 +2,67 @@
 export const $ = (s, r = document) => r.querySelector(s);
 export const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 export const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+export const h = (html) => { const t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstElementChild; };
 
 let toastTimer;
 export function toast(msg) {
-  const t = $('#toast');
-  if (!t) return;
+  let t = $('#toast');
+  if (!t) { t = h('<div class="toast" id="toast"></div>'); document.body.appendChild(t); }
   t.textContent = msg;
   t.classList.add('show');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2400);
 }
 
-export const mmss = ms => { const s = Math.max(0, Math.round(ms / 1000)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+export function clock(ms) {
+  const s = Math.max(0, Math.floor(ms / 1000));
+  const hh = Math.floor(s / 3600); const m = Math.floor((s % 3600) / 60); const x = s % 60;
+  return hh ? `${hh}:${String(m).padStart(2, '0')}:${String(x).padStart(2, '0')}` : `${m}:${String(x).padStart(2, '0')}`;
+}
 export function dur(secs) {
   const m = Math.round(secs / 60);
-  if (m < 1) return `${Math.round(secs)}s`;
+  if (secs < 60) return `${Math.round(secs)}s`;
   if (m < 60) return `${m}m`;
-  return `${Math.floor(m / 60)}h ${m % 60 ? (m % 60) + 'm' : ''}`.trim();
+  const hh = Math.floor(m / 60);
+  return hh < 100 ? `${hh}h ${m % 60 ? (m % 60) + 'm' : ''}`.trim() : `${hh}h`;
 }
 export const favicon = url => {
   try { return `https://www.google.com/s2/favicons?domain=${new URL(url.includes('://') ? url : 'https://' + url).hostname}&sz=32`; } catch (e) { return ''; }
 };
-
-export const send = msg => new Promise(res => chrome.runtime.sendMessage(msg, r => res(r || { ok: false })));
-
+export const send = msg => new Promise(res => chrome.runtime.sendMessage(msg, r => res(r || { ok: false, error: chrome.runtime.lastError?.message })));
 export function applyAccent(color) { if (color) document.documentElement.style.setProperty('--accent', color); }
 
-export function defHtml(r, opts = {}) {
-  if (!r) return '';
-  const head = `<div class="row"><span class="term">${esc(r.term)}</span>${r.phonetic ? `<span class="muted">${esc(r.phonetic)}</span>` : ''}
-    ${r.audio ? `<button class="ghost small" data-audio="${esc(r.audio)}" title="Pronounce">🔊</button>` : ''}<span class="sp"></span>${opts.actions || ''}</div>`;
-  if (!r.found && !(r.meanings || []).length) return `<div class="def">${head}<div class="muted small">No dictionary entry. ${opts.missing || ''}</div></div>`;
-  const body = (r.meanings || []).map(m => `<div class="pos">${esc(m.pos)}</div><ol>${m.defs.map(d => `<li>${esc(d.d)}${d.e ? `<div class="ex">“${esc(d.e)}”</div>` : ''}</li>`).join('')}</ol>${m.syn?.length ? `<div class="syn">≈ ${m.syn.map(esc).join(', ')}</div>` : ''}`).join('');
-  return `<div class="def">${head}${body}</div>`;
+// promise-based dialogs styled like the app
+export function ask({ title, text = '', value, ok = 'OK', danger = false, cancel = 'Cancel' }) {
+  return new Promise(resolve => {
+    const d = h(`<dialog class="modal small"><form method="dialog">
+      <h3>${esc(title)}</h3>${text ? `<p class="muted">${esc(text)}</p>` : ''}
+      ${value !== undefined ? `<input type="text" name="v" value="${esc(value)}" autocomplete="off">` : ''}
+      <div class="row end"><button value="cancel" type="submit" class="ghost">${esc(cancel)}</button><button value="ok" type="submit" class="${danger ? 'danger-solid' : 'primary'}">${esc(ok)}</button></div>
+    </form></dialog>`);
+    document.body.appendChild(d);
+    d.addEventListener('close', () => {
+      const v = d.returnValue === 'ok' ? (value !== undefined ? d.querySelector('input').value.trim() : true) : null;
+      d.remove();
+      resolve(v);
+    });
+    d.showModal();
+    const inp = d.querySelector('input');
+    if (inp) { inp.focus(); inp.select(); }
+  });
 }
-export function wireAudio(root) {
-  root.addEventListener('click', e => {
-    const b = e.target.closest('[data-audio]');
-    if (b) new Audio(b.dataset.audio).play().catch(() => {});
+export const confirmBox = (title, text, ok = 'Delete') => ask({ title, text, ok, danger: true });
+
+export function downloadJson(name, data) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([typeof data === 'string' ? data : JSON.stringify(data, null, 1)], { type: 'application/json' }));
+  a.download = name;
+  a.click();
+}
+export function pickFile(accept) {
+  return new Promise(resolve => {
+    const i = Object.assign(document.createElement('input'), { type: 'file', accept });
+    i.onchange = async () => resolve(i.files[0] ? await i.files[0].text() : null);
+    i.click();
   });
 }

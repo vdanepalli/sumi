@@ -1,5 +1,6 @@
 // Tab tools, used directly from extension pages (tabs API works there).
-import { domainOf, put, list, remove, uid, getSettings } from './store.js';
+import { domainOf, getSettings } from './store.js';
+import { spaces, saveTabs } from './collections.js';
 
 const normalUrl = u => { try { const x = new URL(u); x.hash = ''; return x.href; } catch (e) { return u; } };
 const isInternal = t => !/^https?:|^file:/.test(t.url || '');
@@ -103,7 +104,9 @@ export async function staleTabs() {
 export async function closeStale() {
   const tabs = await staleTabs();
   if (tabs.length) {
-    await saveSession(`Closed stale tabs ${new Date().toLocaleString()}`, tabs); // never lose them
+    // never lose them: saved as a collection in the first space
+    const [space] = await spaces();
+    await saveTabs(space.id, `Stale tabs · ${new Date().toLocaleDateString()}`, tabs, { close: false });
     await chrome.tabs.remove(tabs.map(t => t.id));
   }
   return tabs.length;
@@ -121,22 +124,3 @@ export async function mergeWindows() {
   for (const t of tabs) await chrome.tabs.move(t.id, { windowId: cur.id, index: -1 });
   return tabs.length;
 }
-
-// ---- sessions ----
-export async function saveSession(name, tabs) {
-  tabs = tabs || (await chrome.tabs.query({ currentWindow: true }));
-  const items = tabs.filter(t => !isInternal(t)).map(t => ({ url: t.url, title: t.title, pinned: !!t.pinned, fav: t.favIconUrl || '' }));
-  if (!items.length) return null;
-  return put('sessions', { id: uid(), name: name || `Session ${new Date().toLocaleString()}`, created: Date.now(), tabs: items });
-}
-export const sessions = async () => (await list('sessions')).sort((a, b) => b.created - a.created);
-export async function restoreSession(s, newWindow = true) {
-  if (newWindow) {
-    const w = await chrome.windows.create({ url: s.tabs.map(t => t.url), focused: true });
-    const created = await chrome.tabs.query({ windowId: w.id });
-    for (let i = 0; i < s.tabs.length; i += 1) if (s.tabs[i].pinned && created[i]) await chrome.tabs.update(created[i].id, { pinned: true });
-  } else {
-    for (const t of s.tabs) await chrome.tabs.create({ url: t.url, pinned: t.pinned, active: false });
-  }
-}
-export const deleteSession = id => remove('sessions', id);

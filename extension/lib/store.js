@@ -1,18 +1,24 @@
-// Storage helpers. Settings live in chrome.storage.sync (follows the user's Chrome
-// sign-in); everything else is local and can sync to the user's own Google Drive
-// (see sync.js). Nothing is sent anywhere else.
+// Storage layer. Everything lives in chrome.storage.local (fast, offline) and is
+// synced to the signed-in user's own Google Drive by sync.js. Records in
+// collections carry updatedAt and are soft-deleted (tombstones) so two devices can
+// be merged safely.
 
 export const DEFAULT_SETTINGS = {
+  // focus
   focusMin: 25, shortMin: 5, longMin: 15, longEvery: 4,
-  autoStartBreak: true, autoStartFocus: false,
-  blockDuringFocus: true,
+  autoStartBreak: true, autoStartFocus: false, dailyGoalMin: 120,
+  blockDuringFocus: false,
   blocked: ['youtube.com', 'x.com', 'twitter.com', 'reddit.com', 'instagram.com', 'facebook.com', 'tiktok.com'],
-  dailyGoalMin: 100,            // focus minutes a day
+  sound: true,
+  // floating widget
+  showWidget: true, widgetExcluded: [],
+  // tracking
   trackUsage: true, idleSec: 60, excluded: [],
-  clock24: false, showSeconds: true,
-  accent: '#8ab4f8',
-  staleDays: 3,
-  sound: true
+  // collections
+  openCardIn: 'new',            // 'new' tab | 'current' tab
+  closeAfterSave: false,        // close tabs after saving a window to a collection
+  // look
+  clock24: false, accent: '#8ab4f8', staleDays: 3
 };
 
 export const uid = () => crypto.randomUUID();
@@ -20,28 +26,28 @@ export const dayKey = (d = new Date()) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 export const daysAgo = n => { const d = new Date(); d.setDate(d.getDate() - n); return dayKey(d); };
 
-export async function getSettings() {
-  const { settings } = await chrome.storage.sync.get('settings');
-  return { ...DEFAULT_SETTINGS, ...(settings || {}) };
-}
-export async function setSettings(patch) {
-  const next = { ...(await getSettings()), ...patch };
-  await chrome.storage.sync.set({ settings: next });
-  return next;
-}
-export async function resetSettings() { await chrome.storage.sync.remove('settings'); return getSettings(); }
-
 export async function get(key, fallback) {
   const r = await chrome.storage.local.get(key);
   return r[key] ?? fallback;
 }
 export async function set(key, value) { await chrome.storage.local.set({ [key]: value }); }
-// read-modify-write on one key
-export async function update(key, fallback, fn) {
-  const next = await fn(await get(key, fallback));
-  await set(key, next);
+
+// serialise read-modify-write per key inside one JS context
+const chains = {};
+export function update(key, fallback, fn) {
+  const run = async () => { const next = await fn(await get(key, fallback)); await set(key, next); return next; };
+  chains[key] = (chains[key] || Promise.resolve()).then(run, run);
+  return chains[key];
+}
+
+// settings are a single record so they sync like everything else
+export async function getSettings() { return { ...DEFAULT_SETTINGS, ...((await get('settings', {})).value || {}) }; }
+export async function setSettings(patch) {
+  const next = { ...(await getSettings()), ...patch };
+  await set('settings', { value: next, updatedAt: Date.now() });
   return next;
 }
+export async function resetSettings() { await set('settings', { value: {}, updatedAt: Date.now() }); return getSettings(); }
 
 export async function deviceId() {
   let id = await get('deviceId');
@@ -49,18 +55,22 @@ export async function deviceId() {
   return id;
 }
 
-// collections: { id: {..., updatedAt, deleted?} } - deletions are kept as tombstones so sync can merge
-export async function list(coll) {
-  const all = await get(coll, {});
-  return Object.values(all).filter(x => !x.deleted);
-}
+// ---- record collections: { id: {...item, updatedAt, deleted?} } ----
+export async function all(coll) { return Object.values(await get(coll, {})).filter(x => !x.deleted); }
+export async function one(coll, id) { const x = (await get(coll, {}))[id]; return x && !x.deleted ? x : null; }
 export async function put(coll, item) {
   item.updatedAt = Date.now();
-  await update(coll, {}, all => ({ ...all, [item.id]: item }));
+  await update(coll, {}, m => ({ ...m, [item.id]: item }));
   return item;
 }
-export async function remove(coll, id) {
-  await update(coll, {}, all => (all[id] ? { ...all, [id]: { id, deleted: true, updatedAt: Date.now() } } : all));
+export async function putMany(coll, items) {
+  const t = Date.now();
+  await update(coll, {}, m => { const n = { ...m }; for (const it of items) { it.updatedAt = t; n[it.id] = it; } return n; });
+}
+export async function remove(coll, ids) {
+  ids = [].concat(ids);
+  const t = Date.now();
+  await update(coll, {}, m => { const n = { ...m }; for (const id of ids) if (n[id]) n[id] = { id, deleted: true, updatedAt: t }; return n; });
 }
 
 export function domainOf(url) {

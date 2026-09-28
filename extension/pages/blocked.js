@@ -1,4 +1,4 @@
-import { $, mmss, send } from '../lib/ui.js';
+import { $, clock as mmss, send } from '../lib/ui.js';
 import { leftMs } from '../lib/timer.js';
 
 const url = new URLSearchParams(location.search).get('u') || '';

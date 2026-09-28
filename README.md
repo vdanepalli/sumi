@@ -1,102 +1,106 @@
-# Sumi 墨 — focus, tabs & words for Chrome
+# Sumi 墨 — tabs, focus & time for Chrome
 
-A calm, true-black Chrome setup in two parts:
+A Toby-style tab manager with focus tools and time tracking, on a true-black new
+tab. Everything is stored in the user's **own Google account** (a private app
+folder in their Google Drive) — there is no Sumi server.
 
 | Folder | What it is |
 | --- | --- |
-| `theme/` | **True Black** theme: pure black frame, tabs and new-tab page, near-black toolbar. |
-| `extension/` | **Sumi**, the productivity extension (new-tab dashboard, popup, background worker). |
-
-Chrome does not let one package be both a theme and an extension (themes cannot
-contain code, and Chrome has no theme API), so they install separately.
+| `extension/` | **Sumi** — the extension (new tab app, popup, floating widget, background worker) |
+| `theme/` | **True Black** — optional pure-black Chrome theme (Chrome does not allow themes and extensions in one package) |
 
 ## Features
 
-**New tab dashboard** — large ticking clock, greeting, focus streak, and four cards:
+### Collections (the new tab)
+- **Spaces → Collections → saved tabs**, like Toby. Rename, collapse, reorder
+  collections by dragging their headers, move a collection to another space by
+  dropping it on the space.
+- **Open tabs panel** (right): every window and tab, live. Drag a tab onto a
+  collection (hold Alt to also close it), onto the drop zone for a new
+  collection, or click *Save* to save a whole window.
+- Cards: click to open (⌘/Ctrl-click: new tab), edit title / URL / note, drag to
+  reorder or move between collections, remove.
+- Collection actions: open all, open in a new window, add the current tab, delete.
+- **Search every saved tab** in every space (`/`).
+- **Import** from Toby (JSON) and OneTab (text); **export** a space in Toby format.
+- Tab tools: close duplicates, group by site (tab groups), sort by site, put
+  inactive tabs to sleep, save & close stale tabs, merge all windows, close a tab.
 
-- **Focus timer (Pomodoro)** — focus / short / long break cycles, countdown on the
-  toolbar icon, notifications, auto-start options, daily focus goal with a 7-day
-  chart and a streak. Optional **blocking of distracting sites** while a focus
-  session runs (a calm "Stay with it" page shows the time left).
-- **Time online** — time per website for today or the last 7 days. Counts only the
-  tab you are actually looking at; pauses when you are idle, the screen locks or
-  Chrome is in the background. Sites can be excluded.
-- **Tabs** — search every tab in every window (Enter jumps to it), close
-  duplicates, group by site (Chrome tab groups), ungroup, sort by site, put
-  inactive tabs to sleep (frees memory), close stale tabs (saved first, never
-  lost), merge all windows, close every tab of one site, save / restore named
-  sessions.
-- **Vocabulary** — look up words and idioms (dictionaryapi.dev, with Wiktionary for
-  idioms and as a fallback), pronunciation audio, examples, synonyms. Save them,
-  add your own notes, and review with spaced repetition (Again / Hard / Good /
-  Easy; intervals 1, 3, 7, 16, 35, 90 days). Words looked up again drop back for
-  review. Word of the day, mastery levels, filters (due, learning, mastered,
-  idioms).
+### Focus
+- **Pomodoro** (focus / short / long break cycles, auto-start options, daily goal,
+  streak, 30-day chart) with optional **blocking of distracting sites** during focus.
+- **Stopwatch** with a label, laps, and a log of stopped sessions.
+- **Floating widget on every page** while the timer or stopwatch is active:
+  pause/resume, skip, stop — drag it anywhere (the position is shared by every tab
+  and window), click the dot to minimise, double-click to open Sumi. Can be hidden
+  per site.
 
-**Anywhere on the web** — select text → right-click → *Sumi: look up and save* (or
-*save as an idiom*): the definition appears as a notification and the word is
-saved with the page it came from.
+### Insights
+- Time per website, **kept permanently** (not just 7 days), merged across all your
+  signed-in computers (or this device only).
+- Ranges: today, yesterday, 7 / 30 / 90 days, this year, all time, custom dates.
+- Totals with change vs the previous period, daily average, top site; chart by
+  day / week / month; 12-month heatmap; full per-site table (share, days, average);
+  CSV export; delete a site's history. Counts only the tab you are looking at and
+  pauses when idle or locked; sites can be excluded.
 
-**Popup** (toolbar icon, `Alt+Shift+S`) — timer controls, quick lookup, time on
-the current site, quick tab actions.
+### Tasks
+- A simple list: add (`!high`, `!today` tags), complete, edit inline, drag to
+  reorder, clear completed.
 
-**Keys** — `Alt+Shift+P` start/pause timer anywhere. On the new tab: `/` search
-tabs, `l` look up, `p` timer, `r` review; in review `space` reveals, `1`–`4` grade.
+### Everywhere
+- Popup (`Alt+Shift+S`): timer & stopwatch controls, save this tab / window to any
+  collection, quick tab tools, time on the current site.
+- Shortcuts: `Alt+Shift+P` timer, `Alt+Shift+W` stopwatch, `Alt+Shift+K` save
+  window (change at `chrome://extensions/shortcuts`).
 
-## Privacy
+## Your data
 
-No servers, no analytics, no accounts of ours. See [PRIVACY.md](PRIVACY.md).
+- **Sign in with Google is required.** Data is kept locally for speed and synced
+  (20 s after changes, every 15 min, and on startup) to a hidden app-data file in
+  the user's own Google Drive (scope `drive.appdata`: Sumi can see only its own
+  folder, never other files). Records merge per item, so several computers work.
+- No analytics, no Sumi server. See [PRIVACY.md](PRIVACY.md).
+- Settings → Data: export / import a full JSON backup.
 
-- Settings sync through the user's own Chrome sign-in (`chrome.storage.sync`).
-- Vocabulary, sessions and stats are stored locally and can sync to a hidden
-  app-data folder in **the user's own Google Drive** (scope `drive.appdata`: only
-  Sumi can see that folder; it cannot read any other Drive files).
-- The only outside requests: dictionary lookups (the looked-up word only) to
-  dictionaryapi.dev / Wiktionary, Google's favicon service for site icons, and
-  Google Drive when sync is on.
-- Export / import a full JSON backup any time (Settings → Your data).
+## Setup
 
-## Install (development)
+### 1. Try it (developer build)
+1. `chrome://extensions` → **Developer mode** → **Load unpacked** → `extension/`.
+2. Open a new tab. Until a Google client ID is configured (step 2) the sign-in
+   screen offers *Continue on this device only*.
+3. Optional: **Load unpacked** → `theme/` for the black theme.
 
-1. `chrome://extensions` → turn on **Developer mode**.
-2. **Load unpacked** → select `extension/`. Open a new tab.
-3. Optional theme: **Load unpacked** → select `theme/`.
-
-Everything works right away except Google Drive sync, which needs an OAuth
-client ID (below). Without it, settings still sync via Chrome and backups work.
-
-## Enabling Google Drive sync
-
-1. Load the extension once and note its ID. To keep the ID stable, add a `"key"`
-   to `manifest.json` (Chrome Web Store → Package → *public key*, or generate one).
-2. Google Cloud Console → create a project → enable **Google Drive API**.
-3. **OAuth consent screen**: External, add scope `.../auth/drive.appdata`.
-4. **Credentials → Create OAuth client ID → Chrome extension**, paste the ID.
+### 2. Google sign-in (one time, for the publisher)
+1. Load the extension and copy its ID. To keep the ID stable across machines and
+   the Web Store, add the store listing's public key as `"key"` in `manifest.json`.
+2. [Google Cloud Console](https://console.cloud.google.com): new project → enable
+   **Google Drive API**.
+3. **OAuth consent screen** → External → scope `.../auth/drive.appdata` (a
+   non-sensitive scope: no security review needed) → publish the app.
+4. **Credentials → Create OAuth client ID → Chrome extension** → paste the ID.
 5. Put the client ID in `extension/manifest.json` → `oauth2.client_id`, reload.
-6. Settings → *Sign in with Google & sync*. Syncs every 30 min after that.
 
-`drive.appdata` is a non-sensitive scope, so publishing does not need Google's
-restricted-scope security review.
-
-## Publish to the Chrome Web Store
-
+### 3. Publish
 ```bash
-./package.sh          # builds dist/sumi-extension-<version>.zip and dist/sumi-theme-<version>.zip
+./package.sh     # dist/sumi-extension-<version>.zip and dist/sumi-theme-<version>.zip
 ```
-
-Upload each zip at https://chrome.google.com/webstore/devconsole (one-time $5
-developer fee). Listing text and permission justifications are in
-[STORE.md](STORE.md). The privacy policy URL can point to PRIVACY.md on GitHub.
+Upload at https://chrome.google.com/webstore/devconsole ($5 one-time developer
+fee). Listing text and permission justifications: [STORE.md](STORE.md).
 
 ## Development
 
-- Plain JavaScript modules, no build step. `extension/lib/` holds the logic
-  (`store`, `timer`, `tabs`, `dict`, `sync`, `ui`), `background.js` the service
-  worker, `dashboard/`, `popup/`, `pages/` the UI.
-- `extension/dev/preview.html` previews the dashboard in a normal browser with a
-  mocked `chrome.*` API and sample data:
-  `python3 -m http.server -d extension 8820` → http://localhost:8820/dev/preview.html
-  (`dev/` is left out of the store package).
+Plain JavaScript modules, no build step.
+
+- `lib/` — `store` (storage + records), `collections`, `tabs`, `timer` (pomodoro +
+  stopwatch), `sync` (Google sign-in + Drive merge), `ui`.
+- `background.js` — service worker: timers, tracking, blocking, sync schedule.
+- `app/` — new tab app; `app/views/` — collections, focus, insights, tasks, settings.
+- `content/widget.js` — floating timer (shadow DOM).
+- `dev/` — `preview.html` (the app) and `widget-test.html` with a mocked
+  `chrome.*` API and sample data:
+  `python3 -m http.server -d extension 8820` → http://localhost:8820/dev/preview.html.
+  Not included in the store package.
 
 ## License
 

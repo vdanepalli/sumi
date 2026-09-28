@@ -4,44 +4,37 @@
   <meta charset="UTF-8">
   <link rel="stylesheet" href="/lib/ui.css">
   <style>
-    body { width: 360px; padding: 14px; }
-    .timer { display: flex; align-items: center; gap: 12px; }
-    .timer .left { font: 300 38px/1 var(--ui); font-variant-numeric: tabular-nums; }
-    .timer .mode { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+    body { width: 340px; padding: 14px; }
     .sp { flex: 1; }
-    section { margin-top: 12px; }
+    .clockrow { display: flex; align-items: center; gap: 8px; }
+    .clockrow .v { font: 300 32px/1 var(--ui); font-variant-numeric: tabular-nums; }
+    .clockrow .m { font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+    .clockrow button { padding: 6px 10px; }
+    hr { border: 0; border-top: 1px solid var(--line); margin: 12px 0; }
     .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
     .grid2 button { font-size: 12.5px; }
-    #out .def { max-height: 220px; overflow: auto; background: var(--card-2); border: 1px solid var(--line); border-radius: 10px; padding: 10px; margin-top: 8px; }
-    #out .term { font-weight: 600; font-size: 16px; }
-    #out ol { margin: 4px 0; padding-left: 18px; }
-    #out .pos { font-style: italic; color: var(--muted); }
-    #out .ex, #out .syn { color: var(--muted); font-size: 12px; }
-    .site { display: flex; gap: 8px; align-items: center; }
-    hr { border: 0; border-top: 1px solid var(--line); margin: 12px 0; }
+    select { width: 100%; }
   </style>
 </head>
 <body>
-  <div class="timer">
-    <div><div class="mode" id="mode">Focus</div><div class="left" id="left">25:00</div></div>
-    <span class="sp"></span>
-    <button class="primary" id="toggle">Start</button>
-    <button id="skip" title="Skip">⏭</button>
+  <div class="clockrow"><div><div class="m" id="tm">Focus</div><div class="v" id="tv">25:00</div></div><span class="sp"></span>
+    <button class="primary" id="t-toggle">Start</button><button id="t-skip" title="Skip">⏭</button></div>
+  <div class="clockrow" style="margin-top:10px"><div><div class="m">Stopwatch</div><div class="v" id="sv">0:00</div></div><span class="sp"></span>
+    <button id="s-toggle">Start</button><button id="s-stop" title="Stop and save">■</button></div>
+  <div class="small muted" id="today" style="margin-top:8px"></div>
+  <hr>
+  <div class="small muted" style="margin-bottom:6px">Save tabs to a collection</div>
+  <select id="target"></select>
+  <div class="grid2" style="margin-top:6px">
+    <button id="save-tab">Save this tab</button>
+    <button id="save-win" class="primary">Save window</button>
   </div>
-  <div class="small muted" id="today"></div>
   <hr>
-  <form id="f" class="row" style="flex-wrap:nowrap"><input type="search" id="q" placeholder="Look up a word…" autofocus><button>Go</button></form>
-  <div id="out"></div>
-  <hr>
-  <div class="site small muted" id="site"></div>
-  <section class="grid2">
-    <button data-act="dupes">Close duplicates</button>
-    <button data-act="group">Group by site</button>
-    <button data-act="sleep">Sleep inactive</button>
-    <button data-act="save">Save window</button>
-  </section>
-  <section class="row"><span class="small faint" id="tabs"></span><span class="sp"></span><button class="ghost" id="dash">Open dashboard ↗</button></section>
-  <div class="toast" id="toast"></div>
+  <div class="grid2" id="tools">
+    <button data-t="dupes">Close duplicates</button>
+    <button data-t="sleep">Sleep inactive</button>
+  </div>
+  <div class="row" style="margin-top:12px"><span class="small faint" id="site"></span><span class="sp"></span><button class="ghost" id="open">Open Sumi ↗</button></div>
   <script type="module" src="popup.js"></script>
 </body>
 </html>

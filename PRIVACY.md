@@ -1,52 +1,55 @@
 # Sumi — Privacy Policy
 
-_Last updated: 27 September 2026_
+_Last updated: 28 September 2026_
 
-Sumi is built so that **your data belongs only to you**. The developer operates no
-servers and collects nothing.
+Sumi keeps **your data in your own Google account**. The developer runs no
+servers, has no database, and never receives any of your data.
 
 ## What Sumi stores
 
-| Data | Where it is kept |
+| Data | Purpose |
 | --- | --- |
-| Settings (timer lengths, blocked sites, look) | Your browser, synced by Chrome through your Google account (`chrome.storage.sync`) |
-| Saved words and idioms, notes, review progress | Your browser (`chrome.storage.local`) |
-| Saved tab sessions (titles and URLs you chose to save) | Your browser |
-| Time spent per website (domain names and seconds per day, last 90 days) | Your browser |
-| Focus-timer history | Your browser |
+| Spaces, collections and saved tabs (titles, URLs, your notes) | Tab manager |
+| Tasks | Task list |
+| Time per website: domain name + seconds per day | Insights |
+| Focus sessions and stopwatch logs | Focus history |
+| Settings | Your preferences |
 
-If you turn on **Google Drive sync**, the items above are also written to a single
-file in the hidden *app data* folder of **your own** Google Drive. Sumi requests
-only the `drive.appdata` permission: it cannot see, read or change any of your
-other Drive files, and nobody but you (through Sumi) can read that folder.
+It is stored in your browser (`chrome.storage.local`) and, once you sign in with
+Google, synced to **one file in the hidden app-data folder of your own Google
+Drive**. Sumi asks only for the `drive.appdata` permission: it can read and
+write that one private folder and cannot see any other Drive files. Your Google
+email and name are shown in Sumi so you know which account is in use.
 
 ## What leaves your computer
 
-- **Dictionary lookups:** the word or phrase you look up is sent to
-  `api.dictionaryapi.dev` and/or `en.wiktionary.org` to fetch its definition.
-- **Site icons:** domain names shown in lists are sent to Google's favicon service
-  (`www.google.com/s2/favicons`) to display their icons.
-- **Google Drive sync (optional, off by default):** your Sumi data file is
-  exchanged with your own Google Drive.
+- **Google Drive** (your own account) — the sync file described above.
+- **Google favicon service** (`www.google.com/s2/favicons`) — site domain names,
+  to display icons next to saved tabs and sites.
 
-Nothing is sent to the developer or any other party. No analytics, no ads, no
-tracking, no selling of data.
+Nothing is sent to the developer or any third party. No analytics, advertising,
+tracking pixels, or data sales.
 
-## Permissions and why
+## The floating widget
 
-- `tabs`, `tabGroups` — tab search, duplicates, grouping, sessions, time tracking of the active tab, focus blocking.
-- `storage`, `unlimitedStorage` — keeping your data locally.
-- `alarms`, `notifications` — the focus timer and its alerts.
-- `contextMenus` — right-click "look up and save".
-- `idle` — pausing time tracking when you are away.
-- `identity` + `drive.appdata` — optional sync to your own Google Drive.
+To show the timer on every page, Sumi adds a small widget to web pages. It only
+displays Sumi's own timer state; it does not read, collect or send page content.
+
+## Permissions
+
+- `tabs`, `tabGroups` — list, search, group, sort, save and restore tabs; time the active tab; show the focus page for blocked sites.
+- `storage`, `unlimitedStorage` — keep your data locally (history is kept until you delete it).
+- `alarms`, `notifications` — timers and their alerts.
+- `idle` — stop counting time when you are away.
+- `identity` + `drive.appdata` — Google sign-in and sync to your own Drive.
+- `scripting` + access to all sites — show the floating timer widget on pages.
 
 ## Your control
 
-Export or import everything as a JSON file, clear usage history, or stop Drive
-sync at any time in Settings → Your data. Removing the extension deletes its
-local data; the Drive file can be removed from Google Drive → Settings → Manage
-apps → Sumi → Delete hidden app data.
+Settings → Data exports or imports everything as a JSON file. Insights lets you
+delete a site's history. Signing out stops syncing. Uninstalling removes local
+data; remove the Drive copy at Google Drive → Settings → Manage apps → Sumi →
+Delete hidden app data.
 
 ## Contact
 

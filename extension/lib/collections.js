@@ -1,0 +1,145 @@
+// Spaces → Collections → Cards (saved tabs), Toby-style.
+// Stored as three record collections so edits from different devices merge per item.
+import { all, one, put, putMany, remove, uid, getSettings } from './store.js';
+
+const byOrder = (a, b) => (a.order ?? 0) - (b.order ?? 0) || (a.created ?? 0) - (b.created ?? 0);
+const nextOrder = list => (list.length ? Math.max(...list.map(x => x.order ?? 0)) + 1 : 0);
+const isSaveable = url => /^(https?|file|ftp):/.test(url || '');
+
+// ---------- spaces ----------
+export async function spaces() {
+  let s = (await all('spaces')).sort(byOrder);
+  if (!s.length) s = [await put('spaces', { id: uid(), name: 'My space', order: 0, created: Date.now() })];
+  return s;
+}
+export async function addSpace(name) { return put('spaces', { id: uid(), name: name || 'New space', order: nextOrder(await spaces()), created: Date.now() }); }
+export async function renameSpace(id, name) { const s = await one('spaces', id); if (s) { s.name = name; await put('spaces', s); } }
+export async function deleteSpace(id) {
+  const cols = (await all('collections')).filter(c => c.spaceId === id);
+  for (const c of cols) await deleteCollection(c.id);
+  await remove('spaces', id);
+}
+
+// ---------- collections ----------
+export async function collections(spaceId) {
+  const c = await all('collections');
+  return (spaceId ? c.filter(x => x.spaceId === spaceId) : c).sort(byOrder);
+}
+export async function addCollection(spaceId, name, atTop = true) {
+  const list = await collections(spaceId);
+  const order = atTop ? (list.length ? Math.min(...list.map(x => x.order ?? 0)) - 1 : 0) : nextOrder(list);
+  return put('collections', { id: uid(), spaceId, name: name || 'New collection', order, created: Date.now(), collapsed: false, starred: false });
+}
+export async function patchCollection(id, patch) { const c = await one('collections', id); if (c) return put('collections', { ...c, ...patch }); return null; }
+export async function deleteCollection(id) {
+  const cs = (await all('cards')).filter(c => c.collectionId === id).map(c => c.id);
+  if (cs.length) await remove('cards', cs);
+  await remove('collections', id);
+}
+export async function reorderCollections(ids) {
+  const cols = await all('collections');
+  const upd = ids.map((id, i) => { const c = cols.find(x => x.id === id); return c ? { ...c, order: i } : null; }).filter(Boolean);
+  await putMany('collections', upd);
+}
+
+// ---------- cards ----------
+export async function cards(collectionId) {
+  const c = await all('cards');
+  return (collectionId ? c.filter(x => x.collectionId === collectionId) : c).sort(byOrder);
+}
+export async function addCards(collectionId, tabs, index) {
+  const existing = await cards(collectionId);
+  const fresh = tabs.filter(t => isSaveable(t.url)).map(t => ({
+    id: uid(), collectionId, url: t.url, title: t.title || t.url, note: t.note || '', fav: t.favIconUrl || t.fav || '', created: Date.now()
+  }));
+  if (!fresh.length) return [];
+  const list = [...existing];
+  list.splice(index ?? list.length, 0, ...fresh);
+  await putMany('cards', list.map((c, i) => ({ ...c, order: i })));
+  return fresh;
+}
+export async function patchCard(id, patch) { const c = await one('cards', id); if (c) return put('cards', { ...c, ...patch }); return null; }
+export const deleteCards = ids => remove('cards', ids);
+// move a card to a collection at a position (same or different collection)
+export async function moveCard(cardId, toCollection, index) {
+  const card = await one('cards', cardId);
+  if (!card) return;
+  const target = (await cards(toCollection)).filter(c => c.id !== cardId);
+  target.splice(index ?? target.length, 0, { ...card, collectionId: toCollection });
+  await putMany('cards', target.map((c, i) => ({ ...c, order: i })));
+}
+
+// ---------- tabs <-> collections ----------
+export async function saveTabs(spaceId, name, tabs, { close } = {}) {
+  const cfg = await getSettings();
+  const col = await addCollection(spaceId, name);
+  await addCards(col.id, tabs);
+  if (close ?? cfg.closeAfterSave) {
+    const ids = tabs.filter(t => isSaveable(t.url) && t.id && !t.pinned).map(t => t.id);
+    if (ids.length) {
+      // keep the window alive: open a new tab first if we would close every tab
+      const win = await chrome.tabs.query({ windowId: tabs[0].windowId });
+      if (win.length <= ids.length) await chrome.tabs.create({ windowId: tabs[0].windowId });
+      await chrome.tabs.remove(ids);
+    }
+  }
+  return col;
+}
+export async function openCards(list, { newWindow = false, focus = true } = {}) {
+  const urls = list.map(c => c.url);
+  if (!urls.length) return;
+  if (newWindow) return chrome.windows.create({ url: urls, focused: focus });
+  for (let i = 0; i < urls.length; i += 1) await chrome.tabs.create({ url: urls[i], active: focus && i === 0 });
+}
+export async function openCard(card, where) {
+  const cfg = await getSettings();
+  if ((where || cfg.openCardIn) === 'current') {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    return chrome.tabs.update(tab.id, { url: card.url });
+  }
+  return chrome.tabs.create({ url: card.url });
+}
+
+// ---------- search ----------
+export async function search(q) {
+  q = q.trim().toLowerCase();
+  if (!q) return [];
+  const words = q.split(/\s+/);
+  const cols = Object.fromEntries((await all('collections')).map(c => [c.id, c]));
+  return (await all('cards'))
+    .filter(c => cols[c.collectionId] && words.every(w => `${c.title} ${c.url} ${c.note}`.toLowerCase().includes(w)))
+    .map(c => ({ ...c, collection: cols[c.collectionId] }))
+    .slice(0, 200);
+}
+
+// ---------- import / export ----------
+// Toby export: { version, lists: [{ title, cards: [{ title, url, customTitle, customDescription }] }] }
+// (also accepts { groups: [{ lists }] } from newer Toby exports)
+export async function importToby(json, spaceId) {
+  const lists = json.lists || (json.groups || []).flatMap(g => g.lists || []);
+  if (!Array.isArray(lists) || !lists.length) throw new Error('No Toby collections found in this file');
+  let cols = 0; let n = 0;
+  for (const l of lists) {
+    const col = await addCollection(spaceId, l.title || 'Imported', false);
+    const added = await addCards(col.id, (l.cards || []).map(c => ({ url: c.url, title: c.customTitle || c.title, note: c.customDescription || '' })));
+    cols += 1; n += added.length;
+  }
+  return { collections: cols, cards: n };
+}
+// OneTab export: lines "url | title", blank line between groups
+export async function importOneTab(text, spaceId) {
+  const groups = text.trim().split(/\n\s*\n/);
+  let n = 0;
+  for (const [i, g] of groups.entries()) {
+    const tabs = g.split('\n').map(l => { const [url, ...t] = l.split(' | '); return { url: url.trim(), title: t.join(' | ').trim() }; }).filter(t => t.url);
+    const col = await addCollection(spaceId, `OneTab ${i + 1}`, false);
+    n += (await addCards(col.id, tabs)).length;
+  }
+  return { collections: groups.length, cards: n };
+}
+export async function exportToby(spaceId) {
+  const cols = await collections(spaceId);
+  const lists = [];
+  for (const c of cols) lists.push({ title: c.name, cards: (await cards(c.id)).map(k => ({ title: k.title, url: k.url, customTitle: k.title, customDescription: k.note || '' })) });
+  return { version: 3, lists };
+}

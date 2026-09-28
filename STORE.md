@@ -1,37 +1,39 @@
 # Chrome Web Store listing notes
 
-## Sumi — Focus, Tabs & Words
+## Sumi — Tabs, Focus & Time
 
-**Short description (132 chars max)**
-A calm black new tab: focus timer, smart tab manager, time-per-site stats and a vocabulary builder. Your data stays yours.
+**Short description (≤132 chars)**
+Save tabs into collections, focus with a floating timer and stopwatch, and see where your time goes — all in your own Google account.
 
-**Category:** Productivity
+**Category:** Productivity → Workflow & planning
 
 **Long description**
-Sumi turns every new tab into a quiet, true-black workspace.
+Sumi replaces your new tab with a calm, true-black workspace.
 
-• Focus timer (Pomodoro) with daily goals, streaks and optional blocking of distracting sites
-• See where your time goes: time per website, only for the tab you are actually using
-• Tame tabs: search all tabs, close duplicates, group or sort by site, sleep idle tabs, save and restore sessions
-• Build your vocabulary: right-click any word or idiom to look it up and save it, then master it with spaced repetition
+TAB COLLECTIONS — organise tabs into spaces and collections. Drag open tabs in, save whole windows, search everything, open a collection in one click. Imports from Toby and OneTab.
 
-Private by design: no servers, no analytics. Settings sync with your Chrome account; optional sync of your words and stats to a hidden folder in your own Google Drive.
+FOCUS — Pomodoro timer and stopwatch that float on every page while running (drag the widget anywhere). Daily goals, streaks, and optional blocking of distracting sites.
 
-**Single purpose:** a focus and learning new-tab dashboard (timer, tab management, time awareness, vocabulary).
+INSIGHTS — time per website with your full history: today, weeks, months, all time, a yearly heatmap and CSV export.
+
+TASKS — a simple list next to your tabs.
+
+TAB TOOLS — close duplicates, group or sort by site, sleep inactive tabs, close stale tabs safely, merge windows.
+
+PRIVATE — sign in with Google and your data is stored in a hidden folder in your own Google Drive. No Sumi servers, no analytics.
+
+**Single purpose:** a new-tab workspace for organising tabs and staying focused.
 
 **Permission justifications**
-- tabs / tabGroups: search, group, sort, dedupe and save tabs; measure time on the active tab; show the focus page for blocked sites.
-- storage / unlimitedStorage: store the user's words, sessions and stats locally.
-- alarms: run the focus timer in the background.
-- notifications: tell the user when a session ends and show saved definitions.
-- contextMenus: "look up and save" on selected text.
-- idle: stop counting time when the user is away.
-- identity: optional sign-in to sync with the user's own Google Drive (drive.appdata).
-- Host permissions: api.dictionaryapi.dev and en.wiktionary.org (definitions), www.googleapis.com (Drive sync).
+- tabs / tabGroups: list, search, save, group and sort the user's tabs; measure time on the active tab; redirect blocked sites during focus.
+- storage / unlimitedStorage: store collections, tasks and long-term time history locally.
+- alarms / notifications: run the timer and notify when a session ends.
+- idle: pause time tracking when the user is away.
+- identity: Google sign-in to sync with the user's own Drive (drive.appdata).
+- scripting + host permission <all_urls>: inject the floating timer widget into pages (display only; no page data is read).
 
-**Data use disclosures:** collects "Web history" only as domain names + seconds, stored locally / in the user's own Drive, never transferred to the developer. No data sold or used for unrelated purposes.
+**Data disclosures:** handles "Web history" (domains + time) and "Website content" is NOT read. Data is stored locally and in the user's own Google Drive, never transferred to the developer, not sold, not used for unrelated purposes.
 
 ## True Black (theme)
-
 **Short description:** A pure black Chrome theme: black frame, tabs and new tab page, soft grey text.
 **Category:** Themes → Dark & Black

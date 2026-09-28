@@ -1,60 +1,71 @@
-import { $, esc, toast, mmss, dur, send, applyAccent, defHtml, wireAudio } from '../lib/ui.js';
+import { $, esc, toast, clock, dur, send, applyAccent } from '../lib/ui.js';
 import { getSettings, get, dayKey, domainOf } from '../lib/store.js';
-import { leftMs, modeLabel } from '../lib/timer.js';
+import { leftMs, modeLabel, swElapsed } from '../lib/timer.js';
+import * as C from '../lib/collections.js';
 import * as Tabs from '../lib/tabs.js';
-import * as Dict from '../lib/dict.js';
 
 const cfg = await getSettings();
 applyAccent(cfg.accent);
-wireAudio(document.body);
-
 let timer = (await send({ type: 'timer', action: 'state' })).data;
+let sw = (await send({ type: 'stopwatch', action: 'state' })).data;
 function render() {
-  if (!timer) return;
-  const left = leftMs(timer);
-  $('#left').textContent = mmss(left);
-  $('#mode').textContent = modeLabel(timer.mode);
-  $('#toggle').textContent = timer.running ? 'Pause' : left < timer.total ? 'Resume' : 'Start';
+  if (timer) {
+    const l = leftMs(timer);
+    $('#tv').textContent = clock(l);
+    $('#tm').textContent = modeLabel(timer.mode);
+    $('#t-toggle').textContent = timer.running ? 'Pause' : l < timer.total ? 'Resume' : 'Start';
+  }
+  if (sw) { $('#sv').textContent = clock(swElapsed(sw)); $('#s-toggle').textContent = sw.running ? 'Pause' : sw.elapsed ? 'Resume' : 'Start'; }
 }
 render();
-setInterval(render, 1000);
-$('#toggle').onclick = async () => { timer = (await send({ type: 'timer', action: 'toggle' })).data; render(); };
-$('#skip').onclick = async () => { timer = (await send({ type: 'timer', action: 'skip' })).data; render(); };
-chrome.storage.onChanged.addListener(c => { if (c.timer) { timer = c.timer.newValue; render(); } });
+setInterval(render, 250);
+chrome.storage.onChanged.addListener(c => { if (c.timer) timer = c.timer.newValue; if (c.stopwatch) sw = c.stopwatch.newValue; render(); });
+$('#t-toggle').onclick = () => send({ type: 'timer', action: 'toggle' });
+$('#t-skip').onclick = () => send({ type: 'timer', action: 'skip' });
+$('#s-toggle').onclick = () => send({ type: 'stopwatch', action: 'toggle' });
+$('#s-stop').onclick = () => send({ type: 'stopwatch', action: 'reset' });
 
 const log = await get('focusLog', {});
 const t = log[dayKey()] || { count: 0, minutes: 0 };
 $('#today').textContent = `Today: ${t.minutes}/${cfg.dailyGoalMin} min focused · ${t.count} session${t.count === 1 ? '' : 's'}`;
 
-// current site time today
-await send({ type: 'flush' });
+// collection picker: "New collection" or an existing one, grouped by space
+const spaces = await C.spaces();
+const cols = await C.collections();
+const last = await get('popupTarget', 'new');
+$('#target').innerHTML = `<option value="new">＋ New collection</option>` + spaces.map(s =>
+  `<optgroup label="${esc(s.name)}">${cols.filter(c => c.spaceId === s.id).map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join('')}</optgroup>`).join('');
+$('#target').value = cols.find(c => c.id === last) ? last : 'new';
+$('#target').onchange = e => chrome.storage.local.set({ popupTarget: e.target.value });
+
 const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+async function targetCollection(defaultName) {
+  const v = $('#target').value;
+  if (v !== 'new') return v;
+  const lastSpace = (await get('lastSpace', null)) || spaces[0].id;
+  return (await C.addCollection(spaces.find(s => s.id === lastSpace)?.id || spaces[0].id, defaultName)).id;
+}
+$('#save-tab').onclick = async () => {
+  if (!/^(https?|file):/.test(tab?.url || '')) return toast('This page cannot be saved');
+  await C.addCards(await targetCollection(domainOf(tab.url) || 'Saved'), [tab]);
+  toast('Tab saved');
+};
+$('#save-win').onclick = async () => {
+  const tabs = (await chrome.tabs.query({ currentWindow: true })).filter(x => /^(https?|file):/.test(x.url));
+  if (!tabs.length) return toast('No web pages in this window');
+  const id = await targetCollection(`${new Date().toLocaleDateString([], { month: 'short', day: 'numeric' })} · ${tabs.length} tabs`);
+  await C.addCards(id, tabs);
+  if (cfg.closeAfterSave) { await chrome.tabs.create({}); await chrome.tabs.remove(tabs.filter(x => !x.pinned).map(x => x.id)); }
+  toast(`Saved ${tabs.length} tabs`);
+};
+$('#tools').onclick = async e => {
+  const b = e.target.closest('[data-t]'); if (!b) return;
+  if (b.dataset.t === 'dupes') toast(`Closed ${await Tabs.closeDuplicates()} duplicates`);
+  if (b.dataset.t === 'sleep') toast(`${await Tabs.sleepInactive()} tabs asleep`);
+};
+
+await send({ type: 'flush' });
 const dom = domainOf(tab?.url || '');
 const usage = (await get('usage', {}))[dayKey()] || {};
-$('#site').innerHTML = dom ? `<span>${esc(dom)}</span><span class="sp"></span><span>${dur(usage[dom] || 0)} today</span>` : '';
-const o = await Tabs.overview();
-$('#tabs').textContent = `${o.count} tabs${o.dupes ? ` · ${o.dupes} duplicates` : ''}`;
-
-let last = null;
-$('#f').addEventListener('submit', async e => {
-  e.preventDefault();
-  const q = $('#q').value.trim();
-  if (!q) return;
-  $('#out').innerHTML = '<div class="small muted">Looking up…</div>';
-  try {
-    last = await Dict.lookup(q);
-    $('#out').innerHTML = defHtml(last, { actions: '<button class="small" id="save">Save</button>', missing: 'You can still save it.' });
-    $('#save').onclick = async () => { await Dict.saveTerm(last, { source: tab ? { url: tab.url, title: tab.title } : null }); toast(`Saved “${last.term}”`); $('#save').textContent = 'Saved ✓'; };
-  } catch (err) { $('#out').innerHTML = `<div class="small muted">${esc(err.message)}</div>`; }
-});
-
-document.querySelector('.grid2').addEventListener('click', async e => {
-  const b = e.target.closest('[data-act]');
-  if (!b) return;
-  const a = b.dataset.act;
-  if (a === 'dupes') toast(`Closed ${await Tabs.closeDuplicates()} duplicates`);
-  if (a === 'group') toast(`Made ${await Tabs.groupByDomain()} groups`);
-  if (a === 'sleep') toast(`${await Tabs.sleepInactive()} tabs asleep`);
-  if (a === 'save') toast((await Tabs.saveSession()) ? 'Window saved' : 'Nothing to save');
-});
-$('#dash').onclick = () => chrome.tabs.create({ url: 'chrome://newtab' });
+$('#site').textContent = dom ? `${dom}: ${dur(usage[dom] || 0)} today` : '';
+$('#open').onclick = () => chrome.tabs.create({ url: 'chrome://newtab' });
