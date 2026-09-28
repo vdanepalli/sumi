@@ -47,6 +47,15 @@ document.addEventListener('click', e => {
   if (d) d.close('cancel');
 });
 
+// Enter confirms any Sumi dialog (unless typing in a multi-line box or on a button)
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Enter' || e.shiftKey || e.isComposing) return;
+  const d = e.target.closest && e.target.closest('dialog[open]');
+  if (!d || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'BUTTON' || e.target.tagName === 'SELECT') return;
+  const ok = d.querySelector('button[value="ok"]');
+  if (ok) { e.preventDefault(); ok.click(); }
+});
+
 // promise-based dialogs styled like the app
 export function ask({ title, text = '', value, ok = 'OK', danger = false, cancel = 'Cancel' }) {
   return new Promise(resolve => {
@@ -62,8 +71,9 @@ export function ask({ title, text = '', value, ok = 'OK', danger = false, cancel
       resolve(v);
     });
     d.showModal();
+    // Enter = OK, Esc = Cancel: focus the text box if there is one, else the OK button
     const inp = d.querySelector('input');
-    if (inp) { inp.focus(); inp.select(); }
+    if (inp) { inp.focus(); inp.select(); } else d.querySelector('button[value="ok"]').focus();
   });
 }
 export const confirmBox = (title, text, ok = 'Delete') => ask({ title, text, ok, danger: true });
