@@ -11,7 +11,12 @@ if grep -q 'REPLACE_WITH_YOUR_OAUTH_CLIENT_ID' extension/manifest.json; then
 fi
 # the Web Store assigns its own key: ship the manifest without the dev "key"
 tmp=$(mktemp -d); cp -R extension/. "$tmp"; rm -rf "$tmp/dev"
-python3 -c 'import json,sys; p=sys.argv[1]; m=json.load(open(p)); m.pop("key",None); json.dump(m,open(p,"w"),indent=2,ensure_ascii=False)' "$tmp/manifest.json"
+# release build: no dev "key"; use the Web Store client ID (RELEASE_CLIENT_ID env or ./release-client-id)
+rel="${RELEASE_CLIENT_ID:-$(cat release-client-id 2>/dev/null || true)}"
+[ -z "$rel" ] && echo "note: no release client ID yet - store build keeps the dev client (sign-in only works after step 4 of PUBLISHING.md)"
+python3 -c 'import json,sys; p,rel=sys.argv[1],sys.argv[2]; m=json.load(open(p)); m.pop("key",None)
+if rel: m["oauth2"]["client_id"]=rel
+json.dump(m,open(p,"w"),indent=2,ensure_ascii=False)' "$tmp/manifest.json" "$rel"
 (cd "$tmp" && zip -qr "$OLDPWD/dist/sumi-extension-$v.zip" . -x '*.DS_Store')
 rm -rf "$tmp"
 (cd theme && zip -qr "../dist/sumi-theme-$tv.zip" . -x '*.DS_Store')
