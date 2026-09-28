@@ -15,6 +15,7 @@ export const DEFAULT_SETTINGS = {
   // tracking
   trackUsage: true, idleSec: 60, excluded: [],
   // collections
+  showFrequent: true,           // "Frequent" strip on Collections (from time tracking)
   openCardIn: 'new',            // 'new' tab | 'current' tab
   closeAfterSave: false,        // close tabs after saving a window to a collection
   // look

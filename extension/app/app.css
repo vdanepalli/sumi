@@ -281,3 +281,5 @@ dialog.pal-dlg { width: min(680px, 94vw); top: 12vh; margin-top: 0; padding: 12p
 .upnext .dd { font-size: 12px; color: var(--muted); }
 .prog { width: 60px; height: 4px; border-radius: 4px; background: #1d1d1d; overflow: hidden; flex: none; }
 .prog i { display: block; height: 100%; background: var(--good); }
+.freq-l { color: var(--faint); align-self: center; cursor: help; }
+.frequent { align-items: center; }

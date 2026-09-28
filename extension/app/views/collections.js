@@ -30,7 +30,7 @@ export async function mount(el) {
           </div></div>
       </header>
       <div class="favs" id="favs"></div>
-      <div class="frequent" id="frequent" title="Your most-used sites (last 30 days) - click to open, drag into a collection"></div>
+      <div class="frequent" id="frequent"></div>
       <div class="dropzone" id="dropzone">Drop a tab here to start a new collection</div>
       <div id="cols"></div>
     </section>
@@ -107,6 +107,11 @@ async function renderFavs() {
 async function renderFrequent() {
   const el = $('#frequent');
   if (!el) return;
+  const cfg = await getSettings();
+  if (!cfg.showFrequent) { el.hidden = true; return; }
+  // sign-in / account pages are visited often but are not useful shortcuts
+  const skip = /(^|\.)(login|signin|mysignins|accounts|auth|sso|oauth|account|myaccount|id)\./i;
+  const skipExact = ['accounts.google.com', 'login.microsoftonline.com', 'login.live.com', 'appleid.apple.com', 'newtab', 'localhost'];
   const usage = await get('usage', {});
   const totals = {};
   for (let i = 0; i < 30; i += 1) {
@@ -114,9 +119,9 @@ async function renderFrequent() {
     const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     for (const [dom, s] of Object.entries(usage[k] || {})) totals[dom] = (totals[dom] || 0) + s;
   }
-  const top = Object.entries(totals).sort((a, b) => b[1] - a[1]).slice(0, 12);
+  const top = Object.entries(totals).filter(([d, s]) => s >= 300 && !skip.test(d + '.') && !skipExact.includes(d)).sort((a, b) => b[1] - a[1]).slice(0, 10);
   el.hidden = !top.length;
-  el.innerHTML = top.map(([d, s]) => `<div class="freq" draggable="true" data-dom="${esc(d)}"><img src="${favicon(d)}" alt=""><span>${esc(d)}</span><small>${Math.round(s / 3600) || '<1'}h</small></div>`).join('');
+  el.innerHTML = `<span class="favs-l freq-l" title="Your most-used sites in the last 30 days, from time tracking. Click to open, drag into a collection. Hide in Settings.">Frequent</span>` + top.map(([d, s]) => `<div class="freq" draggable="true" data-dom="${esc(d)}"><img src="${favicon(d)}" alt=""><span>${esc(d)}</span><small>${s >= 3600 ? Math.round(s / 3600) + 'h' : Math.round(s / 60) + 'm'}</small></div>`).join('');
   el.onclick = e => { const f = e.target.closest('[data-dom]'); if (f) chrome.tabs.create({ url: `https://${f.dataset.dom}` }); };
   $$('#frequent [data-dom]').forEach(f => f.addEventListener('dragstart', e => setData(e, { kind: 'tab', tab: { url: `https://${f.dataset.dom}`, title: f.dataset.dom } })));
 }

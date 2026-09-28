@@ -48,6 +48,7 @@ export async function mount(el) {
       </fieldset>
 
       <fieldset><legend>Collections &amp; tabs</legend>
+        <label class="ck"><input type="checkbox" name="showFrequent"> Show “Frequent” sites (from time tracking) above collections</label>
         <label>Open saved tabs in <select name="openCardIn"><option value="new">a new tab</option><option value="current">the current tab</option></select></label>
         <label class="ck"><input type="checkbox" name="closeAfterSave"> Close tabs after saving a window</label>
         <label>Tabs are stale after <input type="number" name="staleDays" min="1" max="90"> days</label>
