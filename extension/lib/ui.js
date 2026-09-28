@@ -32,6 +32,14 @@ export const favicon = url => {
 export const send = msg => new Promise(res => chrome.runtime.sendMessage(msg, r => res(r || { ok: false, error: chrome.runtime.lastError?.message })));
 export function applyAccent(color) { if (color) document.documentElement.style.setProperty('--accent', color); }
 
+// broken images: extension pages cannot use inline onerror="" (CSP), so fall back here
+document.addEventListener('error', e => {
+  const img = e.target;
+  if (!(img instanceof HTMLImageElement) || !img.dataset.fb) return;
+  if (img.dataset.fb === 'hide') img.style.visibility = 'hidden';
+  else if (!img.src.endsWith(img.dataset.fb)) img.src = img.dataset.fb;
+}, true);
+
 // Cancel buttons are type="button" so Enter submits the OK button; close their dialog here
 document.addEventListener('click', e => {
   const b = e.target.closest && e.target.closest('button[value="cancel"]');

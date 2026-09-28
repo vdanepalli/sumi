@@ -95,7 +95,7 @@ async function renderFavs() {
   el.hidden = !cards.length && !cols.length;
   el.innerHTML = `<span class="favs-l">★ Favourites</span>` +
     cols.map(c => `<div class="fav-c" data-fcol="${c.id}" title="Open all tabs in ${esc(c.name)}">▦ ${esc(c.name)}</div>`).join('') +
-    cards.map(k => `<div class="freq" data-fcard="${k.id}" title="${esc(k.url)}"><img src="${esc(k.fav || favicon(k.url))}" alt="" onerror="this.src='/icons/icon16.png'"><span>${esc(k.title)}</span></div>`).join('');
+    cards.map(k => `<div class="freq" data-fcard="${k.id}" title="${esc(k.url)}"><img src="${esc(k.fav || favicon(k.url))}" alt="" data-fb="/icons/icon16.png"><span>${esc(k.title)}</span></div>`).join('');
   el.onclick = async e => {
     const c = e.target.closest('[data-fcard]'); const col = e.target.closest('[data-fcol]');
     if (c) C.openCard(cards.find(k => k.id === c.dataset.fcard), e.metaKey || e.ctrlKey ? 'new' : undefined);
@@ -193,7 +193,7 @@ async function renderBoard() {
 function cardHtml(k) {
   const dom = domainOf(k.url) || k.url.split('/')[0];
   return `<div class="card-t" draggable="true" data-card="${k.id}" title="${esc(k.url)}">
-    <img src="${esc(k.fav || favicon(k.url))}" alt="" loading="lazy" onerror="this.src='/icons/icon16.png'">
+    <img src="${esc(k.fav || favicon(k.url))}" alt="" loading="lazy" data-fb="/icons/icon16.png">
     <div class="ct"><div class="tt">${esc(k.title)}</div><div class="dd">${esc(k.note || dom)}</div></div>
     ${k.starred ? '<span class="kstar">★</span>' : ''}
     <div class="ca"><button class="ghost icon" data-ca="star" title="${k.starred ? 'Remove from favourites' : 'Add to favourites'}">${k.starred ? '★' : '☆'}</button><button class="ghost icon" data-ca="edit" title="Edit">✎</button><button class="ghost icon" data-ca="del" title="Remove">✕</button></div>
@@ -269,7 +269,7 @@ async function renderSearch(box) {
   const res = await C.search(query);
   const sp = Object.fromEntries((await C.spaces()).map(s => [s.id, s.name]));
   box.innerHTML = `<div class="search-res"><div class="muted small">${res.length} saved tab${res.length === 1 ? '' : 's'} match</div>
-    ${res.map(k => `<div class="card-t wide" data-card="${k.id}" title="${esc(k.url)}"><img src="${esc(k.fav || favicon(k.url))}" alt="" onerror="this.src='/icons/icon16.png'">
+    ${res.map(k => `<div class="card-t wide" data-card="${k.id}" title="${esc(k.url)}"><img src="${esc(k.fav || favicon(k.url))}" alt="" data-fb="/icons/icon16.png">
       <div class="ct"><div class="tt">${esc(k.title)}</div><div class="dd">${esc(domainOf(k.url) || '')} · ${esc(sp[k.collection.spaceId] || '')} › ${esc(k.collection.name)}</div></div></div>`).join('')}</div>`;
   box.onclick = async e => { const c = e.target.closest('[data-card]'); if (c) C.openCard(res.find(x => x.id === c.dataset.card)); };
 }
@@ -308,7 +308,7 @@ async function renderTabs() {
     return `<div class="win"><div class="win-h"><span>${w === cur ? 'This window' : `Window ${i + 1}`} · ${list.length}</span><span class="sp"></span>
       <button class="ghost small" data-save-win="${w}" title="Save these tabs as a collection">Save</button></div>
       ${list.map(t => `<div class="otab ${t.active ? 'act' : ''} ${t.discarded ? 'zz' : ''}" draggable="true" data-tab="${t.id}" title="${esc(t.url)}">
-        <img src="${esc(t.favIconUrl || favicon(t.url))}" alt="" onerror="this.src='/icons/icon16.png'"><span class="t">${esc(t.title || t.url)}</span>
+        <img src="${esc(t.favIconUrl || favicon(t.url))}" alt="" data-fb="/icons/icon16.png"><span class="t">${esc(t.title || t.url)}</span>
         <button class="ghost icon x" data-close="${t.id}" title="Close tab">✕</button></div>`).join('')}</div>`;
   }).join('');
   wrap.onclick = async e => {

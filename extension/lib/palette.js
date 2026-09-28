@@ -73,7 +73,7 @@ export async function mountPalette(root, { onDone = () => {}, autofocus = true }
     shown = words.length ? items.map(i => [i, score(i, words)]).filter(([, s]) => s >= 0).sort((a, b) => a[1] - b[1]).map(([i]) => i).slice(0, 40) : initial(items);
     sel = Math.min(sel, Math.max(0, shown.length - 1));
     list.innerHTML = shown.map((i, n) => `<li class="${n === sel ? 'sel' : ''}" data-n="${n}">
-      ${i.icon ? `<img src="${esc(i.icon)}" alt="" onerror="this.style.visibility='hidden'">` : `<span class="pi">${i.kind === 'action' ? '›' : i.kind === 'task' ? '☐' : '▦'}</span>`}
+      ${i.icon ? `<img src="${esc(i.icon)}" alt="" data-fb="hide">` : `<span class="pi">${i.kind === 'action' ? '›' : i.kind === 'task' ? '☐' : '▦'}</span>`}
       <span class="pt">${esc(i.title)}${i.sub ? `<small>${esc(i.sub)}</small>` : ''}</span><span class="pk">${LABEL[i.kind]}</span></li>`).join('') || '<li class="muted">No matches</li>';
     list.querySelector('.sel')?.scrollIntoView({ block: 'nearest' });
   };
