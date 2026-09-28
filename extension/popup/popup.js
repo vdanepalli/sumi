@@ -70,7 +70,16 @@ $('#save-later').onclick = async () => {
 if (tab && /^https?:/.test(tab.url)) { const k = L.kindOf(tab.url); $('#lkind').options[0].textContent = `Auto (${L.KINDS[k].toLowerCase()})`; }
 $('#tools').onclick = async e => {
   const b = e.target.closest('[data-t]'); if (!b) return;
-  if (b.dataset.t === 'dupes') toast(`Closed ${await Tabs.closeDuplicates()} duplicates`);
+  if (b.dataset.t === 'dupes') {
+    const n = (await Tabs.overview()).dupes;
+    if (!n) return toast('No duplicate tabs');
+    if (b.dataset.armed !== '1') { b.dataset.armed = '1'; b.textContent = `Close ${n}? Click again`; setTimeout(() => { b.dataset.armed = ''; b.textContent = 'Close duplicates'; }, 3000); return; }
+    toast(`Closed ${await Tabs.closeDuplicates()} duplicates`);
+  }
+  if (b.dataset.t === 'all') {
+    const r = await C.saveAllWindows(`Saved ${new Date().toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}`);
+    toast(r ? `Saved ${r.tabs} tabs from ${r.windows} windows as a new space` : 'No web pages open');
+  }
   if (b.dataset.t === 'sleep') toast(`${await Tabs.sleepInactive()} tabs asleep`);
 };
 

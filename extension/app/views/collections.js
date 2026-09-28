@@ -36,6 +36,7 @@ export async function mount(el) {
     </section>
     <aside class="open-tabs">
       <div class="sec-h">Open tabs <span class="faint small" id="tab-count"></span></div>
+      <button class="primary save-all" id="save-all" title="Save every window as a new space - e.g. before leaving work">Save all windows…</button>
       <div class="tools">
         <button data-t="dupes" title="Close duplicate tabs">Duplicates <b id="n-dupes"></b></button>
         <button data-t="group" title="Group this window's tabs by site">Group</button>
@@ -55,6 +56,7 @@ export async function mount(el) {
   $('#add-space').onclick = async () => { const n = await ask({ title: 'New space', value: '' }); if (n) { space = await C.addSpace(n); await set('lastSpace', space.id); render(); } };
   $('#new-col').onclick = async () => { const n = await ask({ title: 'New collection', value: '' }); if (n) { await C.addCollection(space.id, n); render(); } };
   $('#save-win').onclick = saveWindow;
+  $('#save-all').onclick = saveAll;
   $('#q').addEventListener('input', e => { query = e.target.value; renderBoard(); });
   $('#tq').addEventListener('input', renderTabs);
   $('#more').onclick = () => { $('#more-menu').hidden = !$('#more-menu').hidden; };
@@ -133,11 +135,13 @@ async function renderSpaces() {
   const cols = await C.collections();
   $('#space-list').innerHTML = sp.map(s => `<li data-id="${s.id}" class="${s.id === space.id ? 'on' : ''}">
       <span class="t">${esc(s.name)}</span><span class="n">${cols.filter(c => c.spaceId === s.id).length}</span>
+      <button class="ghost icon" data-a="open" title="Open this space: each collection in its own window">⧉</button>
       <button class="ghost icon" data-a="rename" title="Rename">✎</button><button class="ghost icon" data-a="del" title="Delete">✕</button></li>`).join('');
   $('#space-list').onclick = async e => {
     const li = e.target.closest('li'); if (!li) return;
     const s = sp.find(x => x.id === li.dataset.id);
     const a = e.target.closest('[data-a]')?.dataset.a;
+    if (a === 'open') { const n = await C.openSpaceAsWindows(s.id); toast(n ? `Opened ${n} window${n === 1 ? '' : 's'}` : 'This space has no saved tabs'); return; }
     if (a === 'rename') { const n = await ask({ title: 'Rename space', value: s.name }); if (n) await C.renameSpace(s.id, n); }
     else if (a === 'del') {
       if (sp.length === 1) return toast('Keep at least one space');
@@ -333,8 +337,37 @@ async function saveWindow(windowId) {
   toast(`Saved ${tabs.length} tabs${cfg.closeAfterSave ? ' and closed them' : ''}`);
 }
 
+async function saveAll() {
+  const tabs = (await chrome.tabs.query({})).filter(t => /^(https?|file):/.test(t.url));
+  if (!tabs.length) return toast('No web pages open');
+  const wins = new Set(tabs.map(t => t.windowId)).size;
+  const d = h(`<dialog class="modal small"><form method="dialog">
+    <h3>Save all windows</h3>
+    <p class="muted">${tabs.length} tabs in ${wins} window${wins === 1 ? '' : 's'} become a new space, one collection per window. Reopen it later with ⧉ next to the space.</p>
+    <input type="text" name="n" value="${esc(`Work · ${new Date().toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}`)}">
+    <label class="ck"><input type="checkbox" name="c"> Close the windows after saving</label>
+    <div class="row end"><button type="button" value="cancel" class="ghost">Cancel</button><button type="submit" value="ok" class="primary">Save</button></div></form></dialog>`);
+  document.body.appendChild(d);
+  d.addEventListener('close', async () => {
+    if (d.returnValue === 'ok') {
+      const name = d.querySelector('[name=n]').value.trim() || 'Saved windows';
+      const close = d.querySelector('[name=c]').checked;
+      const me = (await chrome.tabs.getCurrent())?.id ?? null;
+      const r = await C.saveAllWindows(name, { close, keepTabId: me });
+      if (r) { space = r.space; await set('lastSpace', space.id); toast(`Saved ${r.tabs} tabs from ${r.windows} window${r.windows === 1 ? '' : 's'}${close ? ' and closed them' : ''}`); render(); }
+    }
+    d.remove();
+  });
+  d.showModal();
+  d.querySelector('[name=n]').select();
+}
+
 async function tool(t) {
-  if (t === 'dupes') toast(`Closed ${await Tabs.closeDuplicates()} duplicate tabs`);
+  if (t === 'dupes') {
+    const n = (await Tabs.overview()).dupes;
+    if (!n) toast('No duplicate tabs');
+    else if (await ask({ title: `Close ${n} duplicate tab${n === 1 ? '' : 's'}?`, text: 'Tabs open more than once are closed; the copy you used last stays open.', ok: 'Close duplicates' })) toast(`Closed ${await Tabs.closeDuplicates()} duplicate tabs`);
+  }
   if (t === 'group') toast(`Made ${await Tabs.groupByDomain()} tab groups`);
   if (t === 'sort') toast(`Sorted ${await Tabs.sortByDomain()} tabs`);
   if (t === 'sleep') toast(`${await Tabs.sleepInactive()} tabs put to sleep`);

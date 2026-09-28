@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Sumi — Tabs, Focus & Time",
   "short_name": "Sumi",
-  "version": "0.4.4",
+  "version": "0.4.5",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAobJ2D0SISui43/tZ72lmq7FgIph2B6rwkMpxXdDfqomzszt41f2farb4q/w+0dg0k8xs5mqoRFzqDvp9XkqdpumqDn1ouJowZC57Qj8GquXO8hJHEn6W3fX+ImN603DWfv1CflP5Cz3Msiu721qDNwg7g6mziOGuTIFVKkbJHT31xTTWTduSNYcUQXrKfDRo5kFiboyXP5//Z/sTa1ZM5ZQ+qKiqMjFtauB2cBbKk30WheKTe0AfEttTm0VdquefGCj+klv761TdttmuAnkLsI+/zeJjgCzV10pp/iSsnVirlX7vXdriVaXB2tj92QL0yvopjXlYzqkmNnrQYXGGIwIDAQAB",
   "description": "Save tabs into collections, focus with a floating timer, track time per site. Your data stays in your own Google account.",
   "icons": {

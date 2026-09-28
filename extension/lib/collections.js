@@ -163,3 +163,30 @@ export async function importBookmarks() {
   for (const root of tree[0].children || []) await walk(root, [root.title]);
   return { space, collections: cols, cards: n };
 }
+
+// "End of day": every window becomes a collection in a new space (optionally closing them)
+export async function saveAllWindows(name, { close = false, keepTabId = null } = {}) {
+  const tabs = (await chrome.tabs.query({})).filter(t => isSaveable(t.url));
+  if (!tabs.length) return null;
+  const space = await addSpace(name);
+  const wins = [...new Set(tabs.map(t => t.windowId))];
+  for (const [i, w] of wins.entries()) {
+    const list = tabs.filter(t => t.windowId === w);
+    await addCards((await addCollection(space.id, `Window ${i + 1} · ${list.length} tabs`, false)).id, list);
+  }
+  if (close) {
+    const ids = tabs.filter(t => !t.pinned && t.id !== keepTabId).map(t => t.id);
+    if (keepTabId === null) await chrome.windows.create({});
+    if (ids.length) await chrome.tabs.remove(ids);
+  }
+  return { space, windows: wins.length, tabs: tabs.length };
+}
+// reopen a space: each collection in its own window
+export async function openSpaceAsWindows(spaceId) {
+  let n = 0;
+  for (const c of await collections(spaceId)) {
+    const list = (await cards(c.id)).filter(k => safeUrl(k.url));
+    if (list.length) { await chrome.windows.create({ url: list.map(k => k.url), focused: true }); n += 1; }
+  }
+  return n;
+}

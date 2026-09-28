@@ -283,3 +283,4 @@ dialog.pal-dlg { width: min(680px, 94vw); top: 12vh; margin-top: 0; padding: 12p
 .prog i { display: block; height: 100%; background: var(--good); }
 .freq-l { color: var(--faint); align-self: center; cursor: help; }
 .frequent { align-items: center; }
+.save-all { width: 100%; margin: 0 0 10px; }

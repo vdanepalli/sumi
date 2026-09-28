@@ -18,11 +18,15 @@ const ACTIONS = [
     await C.saveTabs(space.id, `Saved ${new Date().toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}`, tabs);
     toast(`Saved ${tabs.length} tabs`);
   }],
+  ['Save all windows as a new space (end of day)', 'tabs', async () => {
+    const r = await C.saveAllWindows(`Saved ${new Date().toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}`);
+    toast(r ? `Saved ${r.tabs} tabs from ${r.windows} windows` : 'No web pages open');
+  }],
   ['Save this page to Later', 'later', async () => {
     const [t] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
     if (t && /^https?:/.test(t.url)) { await L.add({ url: t.url, title: t.title }); toast('Saved to Later'); }
   }],
-  ['Close duplicate tabs', 'tabs', async () => toast(`Closed ${await Tabs.closeDuplicates()} duplicates`)],
+  ['Close duplicate tabs (keeps one of each)', 'tabs', async () => toast(`Closed ${await Tabs.closeDuplicates()} duplicates`)],
   ['Group tabs by site', 'tabs', async () => toast(`Made ${await Tabs.groupByDomain()} groups`)],
   ['Sort tabs by site', 'tabs', async () => toast(`Sorted ${await Tabs.sortByDomain()} tabs`)],
   ['Put inactive tabs to sleep', 'tabs', async () => toast(`${await Tabs.sleepInactive()} tabs asleep`)],
