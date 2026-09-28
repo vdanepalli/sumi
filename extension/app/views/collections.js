@@ -24,10 +24,12 @@ export async function mount(el) {
         <div class="menu-wrap"><button id="more" class="ghost">⋯</button>
           <div class="menu" id="more-menu" hidden>
             <button data-m="expand">Expand all</button><button data-m="collapse">Collapse all</button>
+            <button data-m="import-bookmarks">Import Chrome bookmarks</button>
             <button data-m="import-toby">Import from Toby (.json)</button><button data-m="import-onetab">Import from OneTab (.txt)</button>
             <button data-m="export">Export this space (Toby format)</button>
           </div></div>
       </header>
+      <div class="frequent" id="frequent" title="Your most-used sites (last 30 days) - click to open, drag into a collection"></div>
       <div class="dropzone" id="dropzone">Drop a tab here to start a new collection</div>
       <div id="cols"></div>
     </section>
@@ -81,7 +83,25 @@ export async function mount(el) {
 }
 function closeMenu(e) { const m = $('#more-menu'); if (m && !e.target.closest('.menu-wrap')) m.hidden = true; }
 const schedule = () => { clearTimeout(renderTimer); renderTimer = setTimeout(() => { renderSpaces(); renderBoard(); }, 80); };
-async function render() { await renderSpaces(); await renderBoard(); await renderTabs(); }
+async function render() { await renderSpaces(); await renderBoard(); await renderTabs(); await renderFrequent(); }
+
+// most-used sites over the last 30 days, from time tracking
+async function renderFrequent() {
+  const el = $('#frequent');
+  if (!el) return;
+  const usage = await get('usage', {});
+  const totals = {};
+  for (let i = 0; i < 30; i += 1) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    for (const [dom, s] of Object.entries(usage[k] || {})) totals[dom] = (totals[dom] || 0) + s;
+  }
+  const top = Object.entries(totals).sort((a, b) => b[1] - a[1]).slice(0, 12);
+  el.hidden = !top.length;
+  el.innerHTML = top.map(([d, s]) => `<div class="freq" draggable="true" data-dom="${esc(d)}"><img src="${favicon(d)}" alt=""><span>${esc(d)}</span><small>${Math.round(s / 3600) || '<1'}h</small></div>`).join('');
+  el.onclick = e => { const f = e.target.closest('[data-dom]'); if (f) chrome.tabs.create({ url: `https://${f.dataset.dom}` }); };
+  $$('#frequent [data-dom]').forEach(f => f.addEventListener('dragstart', e => setData(e, { kind: 'tab', tab: { url: `https://${f.dataset.dom}`, title: f.dataset.dom } })));
+}
 
 // ---------------- spaces ----------------
 async function renderSpaces() {
@@ -198,7 +218,7 @@ function wireBoard(cols, allCards) {
       const d = data(e);
       if (!d) return;
       if (d.kind === 'card') await C.moveCard(d.id, grid.dataset.cards, index);
-      if (d.kind === 'tab') { await C.addCards(grid.dataset.cards, [d.tab], index); if (e.altKey) chrome.tabs.remove(d.tab.id); }
+      if (d.kind === 'tab') { await C.addCards(grid.dataset.cards, [d.tab], index); if (e.altKey && d.tab.id) chrome.tabs.remove(d.tab.id); }
     });
   });
   // collection reorder: drop a collection header on another collection
@@ -303,6 +323,12 @@ async function tool(t) {
 
 async function menu(m) {
   if (m === 'expand' || m === 'collapse') for (const c of await C.collections(space.id)) await C.patchCollection(c.id, { collapsed: m === 'collapse' });
+  if (m === 'import-bookmarks') {
+    const r = await C.importBookmarks();
+    space = r.space; await set('lastSpace', space.id);
+    toast(`Imported ${r.cards} bookmarks into ${r.collections} collections`);
+    return render();
+  }
   if (m === 'import-toby') {
     const text = await pickFile('.json,application/json');
     if (!text) return;

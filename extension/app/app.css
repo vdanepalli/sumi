@@ -199,3 +199,46 @@ dialog.modal.small form { display: grid; gap: 10px; }
 dialog.modal h3 { margin: 0; }
 dialog.modal p { margin: 0; }
 dialog::backdrop { background: rgba(0,0,0,.7); backdrop-filter: blur(3px); }
+
+/* ---------- nav badge ---------- */
+.rail a .badge { margin-left: auto; background: var(--bad); color: #000; font-size: 11px; font-weight: 700; border-radius: 99px; padding: 0 7px; line-height: 18px; }
+
+/* ---------- later ---------- */
+.v-later > * { max-width: 1000px; margin-left: auto; margin-right: auto; }
+.later-h { margin-bottom: 12px; }
+.later-h input[type=url] { flex: 1; }
+.later-h select { width: auto; }
+.grow { flex: 1; }
+.later-bar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+.later-bar input[type=search] { width: 200px; }
+.later-stats { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+.lgroup.overdue h3 { color: var(--bad); }
+.litem { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--line); background: var(--card); border-radius: 12px; margin-bottom: 8px; cursor: pointer; transition: border-color .12s; }
+.litem:hover { border-color: #333; }
+.litem.done { opacity: .5; }
+.litem .thumb { width: 96px; height: 54px; object-fit: cover; border-radius: 7px; flex: none; background: #111; }
+.litem .fav { width: 20px; height: 20px; flex: none; }
+.litem .lt { flex: 1; min-width: 0; }
+.litem .tt { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 14px; }
+.litem .dd { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 12px; color: var(--faint); margin-top: 2px; }
+.litem .hi { color: var(--bad); font-weight: 700; }
+.litem .k { font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; padding: 1px 6px; border-radius: 5px; background: #1a1a1a; color: var(--muted); }
+.litem .k-watch { color: #e5736b; } .litem .k-paper { color: #c9a45c; } .litem .k-read { color: var(--accent); } .litem .k-listen { color: #6cc28b; }
+.litem .due { font-size: 12px; color: var(--muted); white-space: nowrap; }
+.litem .due.over { color: var(--bad); font-weight: 600; }
+.litem .la { display: flex; gap: 2px; opacity: 0; }
+.litem:hover .la { opacity: 1; }
+.st { width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid #555; padding: 0; background: transparent; flex: none; }
+.st.doing { border-color: var(--warn); background: conic-gradient(var(--warn) 0 50%, transparent 50% 100%); }
+.st.done { border-color: var(--good); background: var(--good); }
+.lform { display: grid; gap: 10px; }
+.lform label { display: grid; gap: 4px; font-size: 12px; color: var(--muted); flex: 1; }
+.lform .row { gap: 10px; flex-wrap: nowrap; }
+
+/* ---------- frequent strip ---------- */
+.frequent { display: flex; gap: 8px; overflow-x: auto; padding: 2px 0 12px; margin-bottom: 4px; }
+.freq { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-radius: 10px; background: var(--card); border: 1px solid var(--line); cursor: pointer; flex: none; max-width: 210px; font-size: 12.5px; }
+.freq:hover { border-color: #333; }
+.freq img { width: 16px; height: 16px; }
+.freq span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.freq small { color: var(--faint); }

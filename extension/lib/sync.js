@@ -8,7 +8,7 @@ const DRIVE = 'https://www.googleapis.com/drive/v3';
 const UPLOAD = 'https://www.googleapis.com/upload/drive/v3/files';
 
 // record collections merged item by item
-export const RECORDS = ['spaces', 'collections', 'cards', 'tasks'];
+export const RECORDS = ['spaces', 'collections', 'cards', 'tasks', 'later'];
 // per-device day maps merged by device
 const DEVICE_MAPS = { usage: 'usage', focusLog: 'focusLog', stopwatchLog: 'stopwatchLog' };
 

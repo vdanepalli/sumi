@@ -11,6 +11,7 @@ servers, has no database, and never receives any of your data.
 | --- | --- |
 | Spaces, collections and saved tabs (titles, URLs, your notes) | Tab manager |
 | Tasks | Task list |
+| Read / watch later items (URL, title, deadline, notes) | Later list and reminders |
 | Time per website: domain name + seconds per day | Insights |
 | Focus sessions and stopwatch logs | Focus history |
 | Settings | Your preferences |
@@ -24,6 +25,7 @@ email and name are shown in Sumi so you know which account is in use.
 ## What leaves your computer
 
 - **Google Drive** (your own account) — the sync file described above.
+- **The page you save to Later** — Sumi fetches that page's public title and preview image (or YouTube/Vimeo's oEmbed) without your cookies.
 - **Google favicon service** (`www.google.com/s2/favicons`) — site domain names,
   to display icons next to saved tabs and sites.
 
@@ -41,6 +43,8 @@ displays Sumi's own timer state; it does not read, collect or send page content.
 - `storage`, `unlimitedStorage` — keep your data locally (history is kept until you delete it).
 - `alarms`, `notifications` — timers and their alerts.
 - `idle` — stop counting time when you are away.
+- `contextMenus` — right-click "Save to Sumi Later".
+- `bookmarks` — only when you choose "Import Chrome bookmarks".
 - `identity` + `drive.appdata` — Google sign-in and sync to your own Drive.
 - `scripting` + access to all sites — show the floating timer widget on pages.
 

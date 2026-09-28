@@ -143,3 +143,22 @@ export async function exportToby(spaceId) {
   for (const c of cols) lists.push({ title: c.name, cards: (await cards(c.id)).map(k => ({ title: k.title, url: k.url, customTitle: k.title, customDescription: k.note || '' })) });
   return { version: 3, lists };
 }
+
+// Chrome bookmarks -> a new space, one collection per folder that holds links
+export async function importBookmarks() {
+  const tree = await chrome.bookmarks.getTree();
+  const space = await addSpace('Chrome bookmarks');
+  let cols = 0; let n = 0;
+  const walk = async (node, path) => {
+    const links = (node.children || []).filter(c => c.url);
+    const name = path.filter(Boolean).join(' › ') || 'Bookmarks';
+    if (links.length) {
+      const col = await addCollection(space.id, name, false);
+      n += (await addCards(col.id, links.map(l => ({ url: l.url, title: l.title })))).length;
+      cols += 1;
+    }
+    for (const c of node.children || []) if (!c.url) await walk(c, [...path, c.title]);
+  };
+  for (const root of tree[0].children || []) await walk(root, [root.title]);
+  return { space, collections: cols, cards: n };
+}

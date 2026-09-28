@@ -16,6 +16,8 @@ FOCUS — Pomodoro timer and stopwatch that float on every page while running (d
 
 INSIGHTS — time per website with your full history: today, weeks, months, all time, a yearly heatmap and CSV export.
 
+READ & WATCH LATER — queue articles, papers and videos with read-by / watch-by deadlines and reminders.
+
 TASKS — a simple list next to your tabs.
 
 TAB TOOLS — close duplicates, group or sort by site, sleep inactive tabs, close stale tabs safely, merge windows.
@@ -29,6 +31,8 @@ PRIVATE — sign in with Google and your data is stored in a hidden folder in yo
 - storage / unlimitedStorage: store collections, tasks and long-term time history locally.
 - alarms / notifications: run the timer and notify when a session ends.
 - idle: pause time tracking when the user is away.
+- contextMenus: "Save to Sumi Later" on pages and links.
+- bookmarks: import the user's bookmarks into collections when they ask to.
 - identity: Google sign-in to sync with the user's own Drive (drive.appdata).
 - scripting + host permission <all_urls>: inject the floating timer widget into pages (display only; no page data is read).
 

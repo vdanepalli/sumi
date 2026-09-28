@@ -26,12 +26,30 @@ folder in their Google Drive) — there is no Sumi server.
 - Tab tools: close duplicates, group by site (tab groups), sort by site, put
   inactive tabs to sleep, save & close stale tabs, merge all windows, close a tab.
 
+### Later — read / watch / papers, with deadlines
+- Save any page or link: right-click → **Save to Sumi Later** (Read / Watch / Paper /
+  Listen, or with a deadline preset), the popup, `Alt+Shift+L`, or paste a link.
+- Type is detected (YouTube/Vimeo → Watch, arXiv/DOI/PDF → Paper, podcasts →
+  Listen); titles and thumbnails are filled in automatically; YouTube playlists
+  are recognised; *Save open YouTube tabs* queues every open video.
+- Deadline ("read / watch by") with a reminder (at the deadline, 15 min – 2 days
+  before). Reminder notifications have **Open now** and **Snooze 1 hour**;
+  reminders missed while Chrome was closed fire on next start.
+- Status (not started → in progress → done), priority, estimated minutes, tags,
+  notes. Grouped as Overdue / Today / This week / Later / No deadline / Done, with
+  filters, search, and a due-count badge in the sidebar.
+
+### Frequently visited & bookmarks
+- The Collections page shows your most-used sites (last 30 days) — click to open
+  or drag into a collection.
+- Import Chrome bookmarks as a space (one collection per folder).
+
 ### Focus
 - **Pomodoro** (focus / short / long break cycles, auto-start options, daily goal,
   streak, 30-day chart) with optional **blocking of distracting sites** during focus.
 - **Stopwatch** with a label, laps, and a log of stopped sessions.
 - **Floating widget on every page** while the timer or stopwatch is active:
-  pause/resume, skip, stop — drag it anywhere (the position is shared by every tab
+  pause/resume, reset, skip; stopwatch lap, reset, stop & save — drag it anywhere (the position is shared by every tab
   and window), click the dot to minimise, double-click to open Sumi. Can be hidden
   per site.
 
@@ -52,7 +70,7 @@ folder in their Google Drive) — there is no Sumi server.
 - Popup (`Alt+Shift+S`): timer & stopwatch controls, save this tab / window to any
   collection, quick tab tools, time on the current site.
 - Shortcuts: `Alt+Shift+P` timer, `Alt+Shift+W` stopwatch, `Alt+Shift+K` save
-  window (change at `chrome://extensions/shortcuts`).
+  window, `Alt+Shift+L` save page to Later (change at `chrome://extensions/shortcuts`).
 
 ## Your data
 

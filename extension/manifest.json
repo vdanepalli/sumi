@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Sumi — Tabs, Focus & Time",
   "short_name": "Sumi",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAobJ2D0SISui43/tZ72lmq7FgIph2B6rwkMpxXdDfqomzszt41f2farb4q/w+0dg0k8xs5mqoRFzqDvp9XkqdpumqDn1ouJowZC57Qj8GquXO8hJHEn6W3fX+ImN603DWfv1CflP5Cz3Msiu721qDNwg7g6mziOGuTIFVKkbJHT31xTTWTduSNYcUQXrKfDRo5kFiboyXP5//Z/sTa1ZM5ZQ+qKiqMjFtauB2cBbKk30WheKTe0AfEttTm0VdquefGCj+klv761TdttmuAnkLsI+/zeJjgCzV10pp/iSsnVirlX7vXdriVaXB2tj92QL0yvopjXlYzqkmNnrQYXGGIwIDAQAB",
   "description": "Organise tabs into collections, focus with a floating timer and stopwatch, and see where your time goes. Your data lives in your own Google account.",
   "icons": {
@@ -36,7 +36,9 @@
     "notifications",
     "idle",
     "identity",
-    "scripting"
+    "scripting",
+    "contextMenus",
+    "bookmarks"
   ],
   "host_permissions": [
     "<all_urls>"
@@ -87,6 +89,13 @@
         "mac": "Alt+Shift+K"
       },
       "description": "Save this window's tabs as a collection"
+    },
+    "save-later": {
+      "suggested_key": {
+        "default": "Alt+Shift+L",
+        "mac": "Alt+Shift+L"
+      },
+      "description": "Save this page to Later (read / watch)"
     }
   },
   "content_security_policy": {

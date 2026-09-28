@@ -23,11 +23,16 @@
     <button id="s-toggle">Start</button><button id="s-stop" title="Stop and save">■</button></div>
   <div class="small muted" id="today" style="margin-top:8px"></div>
   <hr>
+  <div class="small muted" style="margin-bottom:6px">Save this page for later</div>
+  <div class="grid2"><select id="lkind"><option value="">Auto (read / watch)</option><option value="read">Read</option><option value="watch">Watch</option><option value="paper">Paper</option><option value="listen">Listen</option></select>
+    <select id="ldue"><option value="">No deadline</option><option value="tonight">Tonight</option><option value="tomorrow">Tomorrow</option><option value="weekend">This weekend</option><option value="week">Within a week</option><option value="month">Within a month</option></select></div>
+  <button id="save-later" class="primary" style="width:100%;margin-top:6px">Save to Later</button>
+  <hr>
   <div class="small muted" style="margin-bottom:6px">Save tabs to a collection</div>
   <select id="target"></select>
   <div class="grid2" style="margin-top:6px">
     <button id="save-tab">Save this tab</button>
-    <button id="save-win" class="primary">Save window</button>
+    <button id="save-win">Save window</button>
   </div>
   <hr>
   <div class="grid2" id="tools">

@@ -3,6 +3,7 @@
 import * as T from './lib/timer.js';
 import { getSettings, update, dayKey, domainOf, matchesDomain } from './lib/store.js';
 import { syncNow, RECORDS } from './lib/sync.js';
+import * as L from './lib/later.js';
 
 // ---------------- install / startup ----------------
 chrome.runtime.onInstalled.addListener(async ({ reason }) => {
@@ -10,12 +11,15 @@ chrome.runtime.onInstalled.addListener(async ({ reason }) => {
   chrome.alarms.create('sync', { periodInMinutes: 15 });
   await T.badge();
   await injectWidgetEverywhere();
+  makeMenus();
+  scheduleReminders();
   if (reason === 'install') chrome.tabs.create({ url: 'app/app.html#welcome' });
 });
 chrome.runtime.onStartup.addListener(async () => {
   chrome.alarms.create('usage-flush', { periodInMinutes: 1 });
   chrome.alarms.create('sync', { periodInMinutes: 15 });
   await T.badge();
+  scheduleReminders();
   syncNow(false).catch(() => {});
 });
 
@@ -86,6 +90,7 @@ async function guard(tab) {
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area !== 'local') return;
   if ([...RECORDS, 'settings'].some(k => k in changes)) chrome.alarms.create('sync-soon', { when: Date.now() + 20000 });
+  if (changes.later) scheduleReminders();
 });
 
 // ---------------- alarms ----------------
@@ -94,12 +99,17 @@ chrome.alarms.onAlarm.addListener(async a => {
   else if (a.name === 'badge') await T.badge();
   else if (a.name === 'usage-flush') await flush();
   else if (a.name === 'sync' || a.name === 'sync-soon') { await flush(); syncNow(false).catch(() => {}); }
+  else if (a.name.startsWith('later:')) await remind(a.name.slice(6));
 });
 
 // ---------------- keyboard ----------------
 chrome.commands.onCommand.addListener(async cmd => {
   if (cmd === 'toggle-timer') await T.toggle();
   if (cmd === 'toggle-stopwatch') await T.swToggle();
+  if (cmd === 'save-later') {
+    const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+    if (tab && /^https?:/.test(tab.url)) { const it = await L.add({ url: tab.url, title: tab.title }); note(`Saved to ${L.KINDS[it.kind]} later`, it.title); }
+  }
   if (cmd === 'save-window') {
     const { spaces, saveTabs } = await import('./lib/collections.js');
     const [space] = await spaces();
@@ -124,3 +134,76 @@ chrome.runtime.onMessage.addListener((msg, sender, reply) => {
   })().then(r => reply({ ok: true, data: r }), e => reply({ ok: false, error: e.message }));
   return true;
 });
+
+// ---------------- Later: right-click menus ----------------
+function makeMenus() {
+  chrome.contextMenus.removeAll(() => {
+    const ctx = ['page', 'link', 'video'];
+    chrome.contextMenus.create({ id: 'later', title: 'Save to Sumi Later', contexts: ctx });
+    for (const [k, label] of Object.entries(L.KINDS)) chrome.contextMenus.create({ id: `later-${k}`, parentId: 'later', title: `${label} later`, contexts: ctx });
+    chrome.contextMenus.create({ id: 'later-sep', parentId: 'later', type: 'separator', contexts: ctx });
+    for (const [k, label] of [['tonight', 'Tonight'], ['tomorrow', 'By tomorrow'], ['weekend', 'By the weekend'], ['week', 'Within a week']]) {
+      chrome.contextMenus.create({ id: `due-${k}`, parentId: 'later', title: `Save · due ${label.toLowerCase()} (reminder 1h before)`, contexts: ctx });
+    }
+    chrome.contextMenus.create({ id: 'save-tab', title: 'Save tab to a Sumi collection (new)', contexts: ['page'] });
+  });
+}
+chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+  const url = info.linkUrl || info.srcUrl || info.pageUrl;
+  const title = info.linkUrl ? (info.selectionText || info.linkUrl) : tab?.title;
+  if (!/^https?:/.test(url || '')) return;
+  const id = String(info.menuItemId);
+  if (id.startsWith('later-')) {
+    const it = await L.add({ url, title, kind: id.slice(6) });
+    note(`Saved to ${L.KINDS[it.kind]} later`, it.title);
+  } else if (id.startsWith('due-')) {
+    const due = L.presetDue(id.slice(4));
+    const it = await L.add({ url, title, due, remindBefore: 60 });
+    note(`Saved · due ${new Date(due).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' })}`, it.title);
+  } else if (id === 'save-tab' && tab) {
+    const { spaces, saveTabs } = await import('./lib/collections.js');
+    const [space] = await spaces();
+    await saveTabs(space.id, tab.title?.slice(0, 40) || 'Saved', [tab], { close: false });
+    note('Tab saved', tab.title);
+  }
+});
+
+// ---------------- Later: reminders ----------------
+async function scheduleReminders() {
+  const alarms = await chrome.alarms.getAll();
+  for (const a of alarms) if (a.name.startsWith('later:')) await chrome.alarms.clear(a.name);
+  const now = Date.now();
+  for (const it of await L.items()) {
+    if (it.status === 'done' || !it.remindAt) continue;
+    if (it.remindAt > now) chrome.alarms.create('later:' + it.id, { when: it.remindAt });
+    else if (!it.reminded) chrome.alarms.create('later:' + it.id, { when: now + 5000 }); // missed while the browser was closed
+  }
+}
+async function remind(id) {
+  const it = (await L.items()).find(x => x.id === id);
+  if (!it || it.status === 'done') return;
+  chrome.notifications.create('later:' + id, {
+    type: 'basic', iconUrl: '/icons/icon128.png', priority: 2, requireInteraction: true,
+    title: `${L.KINDS[it.kind]}: ${it.due ? (it.due < Date.now() ? 'overdue' : 'due ' + L.relTime(it.due)) : 'reminder'}`,
+    message: it.title.slice(0, 200),
+    buttons: [{ title: 'Open now' }, { title: 'Snooze 1 hour' }]
+  });
+  await L.patch(id, { reminded: true });
+}
+chrome.notifications.onButtonClicked.addListener(async (nid, btn) => {
+  if (!nid.startsWith('later:')) return;
+  const id = nid.slice(6);
+  chrome.notifications.clear(nid);
+  const it = (await L.items()).find(x => x.id === id);
+  if (!it) return;
+  if (btn === 0) { await chrome.tabs.create({ url: it.url }); if (it.status === 'todo') await L.patch(id, { status: 'doing' }); }
+  if (btn === 1) await L.patch(id, { remindAt: Date.now() + 3600000, reminded: false });
+});
+chrome.notifications.onClicked.addListener(async nid => {
+  if (!nid.startsWith('later:')) return;
+  chrome.notifications.clear(nid);
+  chrome.tabs.create({ url: chrome.runtime.getURL('app/app.html#later') });
+});
+function note(title, message) {
+  chrome.notifications.create('n-' + Date.now(), { type: 'basic', iconUrl: '/icons/icon128.png', title, message: (message || '').slice(0, 200) });
+}

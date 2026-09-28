@@ -3,6 +3,7 @@ import { getSettings, get, dayKey, domainOf } from '../lib/store.js';
 import { leftMs, modeLabel, swElapsed } from '../lib/timer.js';
 import * as C from '../lib/collections.js';
 import * as Tabs from '../lib/tabs.js';
+import * as L from '../lib/later.js';
 
 const cfg = await getSettings();
 applyAccent(cfg.accent);
@@ -58,6 +59,13 @@ $('#save-win').onclick = async () => {
   if (cfg.closeAfterSave) { await chrome.tabs.create({}); await chrome.tabs.remove(tabs.filter(x => !x.pinned).map(x => x.id)); }
   toast(`Saved ${tabs.length} tabs`);
 };
+$('#save-later').onclick = async () => {
+  if (!/^https?:/.test(tab?.url || '')) return toast('This page cannot be saved');
+  const due = L.presetDue($('#ldue').value);
+  const it = await L.add({ url: tab.url, title: tab.title, kind: $('#lkind').value || undefined, due, remindBefore: due ? 60 : null });
+  toast(`Saved to ${L.KINDS[it.kind]} later${due ? ' · reminder 1h before' : ''}`);
+};
+if (tab && /^https?:/.test(tab.url)) { const k = L.kindOf(tab.url); $('#lkind').options[0].textContent = `Auto (${L.KINDS[k].toLowerCase()})`; }
 $('#tools').onclick = async e => {
   const b = e.target.closest('[data-t]'); if (!b) return;
   if (b.dataset.t === 'dupes') toast(`Closed ${await Tabs.closeDuplicates()} duplicates`);

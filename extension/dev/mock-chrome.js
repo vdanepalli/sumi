@@ -16,7 +16,15 @@
     c4: [['Async book','https://rust-lang.github.io/async-book/'],['Tokio tutorial','https://tokio.rs/tokio/tutorial']] };
   const cards = {}; Object.entries(cardData).forEach(([c, list]) => list.forEach(([title, url], i) => { const id = c + i; cards[id] = rec({ id, collectionId: c, title, url, note: i === 0 && c === 'c1' ? 'Discuss Thursday' : '', order: i }); }));
   const tasks = {}; [['Review PR #418', false, true], ['Write API migration notes', false, false], ['Book dentist', true, false]].forEach(([text, done, high], i) => tasks['t' + i] = rec({ id: 't' + i, text, done, high, order: i }));
-  const local = { usage, focusLog, spaces, collections, cards, tasks, account: { email: 'you@gmail.com', name: 'You' }, deviceId: 'dev1', lastSpace: 's1',
+  const L = (id, title, url, kind, dueH, status, extra = {}) => rec({ id, title, url, kind, due: dueH === null ? null : now + dueH * 3600000, remindAt: dueH === null ? null : now + (dueH - 1) * 3600000, status, priority: 'normal', minutes: null, tags: [], note: '', created: now - 86400000, thumb: '', author: '', playlist: false, ...extra });
+  const later = Object.fromEntries([
+    L('l1', 'Attention Is All You Need', 'https://arxiv.org/abs/1706.03762', 'paper', -5, 'doing', { author: 'arXiv.org', minutes: 45, tags: ['ml'] }),
+    L('l2', 'Stanford CS229: Machine Learning (full course)', 'https://www.youtube.com/playlist?list=PLoROMvodv4rMiGQp3WXShtMGgzqpfVfbU', 'watch', 6, 'todo', { playlist: true, author: 'Stanford Online' }),
+    L('l3', 'Microservices - Martin Fowler', 'https://martinfowler.com/articles/microservices.html', 'read', 30, 'todo', { priority: 'high', minutes: 25 }),
+    L('l4', 'Designing Data-Intensive Applications - talk', 'https://www.youtube.com/watch?v=PdtlXdse7pw', 'watch', 100, 'todo', { author: 'GOTO Conferences', thumb: 'https://i.ytimg.com/vi/PdtlXdse7pw/hqdefault.jpg' }),
+    L('l5', 'Lex Fridman Podcast #400', 'https://open.spotify.com/episode/x', 'listen', null, 'todo')
+  ].map(x => [x.id, x]));
+  const local = { later, usage, focusLog, spaces, collections, cards, tasks, account: { email: 'you@gmail.com', name: 'You' }, deviceId: 'dev1', lastSpace: 's1',
     timer: { mode: 'focus', running: true, remaining: 0, total: 25*60000, endsAt: now + 14*60000 + 37000, cycle: 2 },
     stopwatch: { running: true, startedAt: now - 47*60000, elapsed: 0, laps: [12*60000, 31*60000], label: 'API design' }, stopwatchLog: { [dk(0)]: [{ ms: 52*60000, label: 'Reading', at: now - 3*3600000 }] } };
   const tabs = ['GitHub - acme/api|https://github.com/acme/api','PR #418 · acme/api|https://github.com/acme/api/pull/418','How to paginate - Stack Overflow|https://stackoverflow.com/q/1','YouTube|https://www.youtube.com/','YouTube|https://www.youtube.com/','Gmail|https://mail.google.com/','Hacker News|https://news.ycombinator.com/','Claude|https://claude.ai/new']

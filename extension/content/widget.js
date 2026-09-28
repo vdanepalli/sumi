@@ -54,14 +54,17 @@
         <span class="lbl">${timer.mode === 'focus' ? 'Focus' : timer.mode === 'short' ? 'Break' : 'Long break'}</span>
         <span class="t" data-k="timer">${fmt(tLeft(timer))}</span>
         <button data-a="timer:toggle" title="${timer.running ? 'Pause' : 'Resume'}">${timer.running ? '❚❚' : '▶'}</button>
-        <button data-a="timer:skip" title="Skip">⏭</button></div>`);
+        <button data-a="timer:reset" title="Reset">↺</button>
+        <button data-a="timer:skip" title="Skip to next">⏭</button></div>`);
     }
     if (swActive(sw)) {
       rows.push(`<div class="row ${sw.running ? '' : 'paused'}"><span class="dot" data-a="min" style="background:#8ab4f8" title="Minimise"></span>
         <span class="lbl">${sw.label ? sw.label.replace(/[<>&"]/g, '') : 'Stopwatch'}</span>
         <span class="t" data-k="sw">${fmt(swMs(sw))}</span>
         <button data-a="stopwatch:toggle" title="${sw.running ? 'Pause' : 'Resume'}">${sw.running ? '❚❚' : '▶'}</button>
-        <button data-a="stopwatch:reset" title="Stop and log">■</button></div>`);
+        <button data-a="stopwatch:lap" title="Lap">⚑</button>
+        <button data-a="stopwatch:discard" title="Reset (discard)">↺</button>
+        <button data-a="stopwatch:reset" title="Stop and save to history">■</button></div>`);
     }
     box.innerHTML = rows.join('');
     box.classList.toggle('min', minimized);

@@ -5,6 +5,7 @@ import { account, signIn, continueLocally, configured, syncNow } from '../lib/sy
 
 const VIEWS = {
   collections: () => import('./views/collections.js'),
+  later: () => import('./views/later.js'),
   focus: () => import('./views/focus.js'),
   insights: () => import('./views/insights.js'),
   tasks: () => import('./views/tasks.js'),
@@ -60,12 +61,22 @@ function tick() {
   $('#mini-clock').innerHTML = `<b>${t}</b><span>${d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })}</span>`;
 }
 
+// due / overdue count on the Later nav item
+async function laterBadge() {
+  const { items } = await import('../lib/later.js');
+  const end = new Date(); end.setHours(23, 59, 59, 999);
+  const n = (await items()).filter(i => i.status !== 'done' && i.due && i.due <= end.getTime()).length;
+  $('#later-badge').hidden = !n;
+  $('#later-badge').textContent = n;
+}
+
 async function start() {
   if (!(await gate())) return;
   tick();
   setInterval(tick, 1000 * 15);
   if (location.hash === '#welcome') location.hash = '#collections';
   await route();
+  laterBadge();
   syncNow(false).catch(() => {});
 }
 
@@ -73,5 +84,6 @@ chrome.storage.onChanged.addListener(async (c, area) => {
   if (area !== 'local') return;
   if (c.settings) { cfg = await getSettings(); applyAccent(cfg.accent); }
   if (c.account) { if (await gate()) route(); }
+  if (c.later) laterBadge();
 });
 start();
