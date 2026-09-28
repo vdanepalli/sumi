@@ -69,8 +69,7 @@ folder in their Google Drive) — there is no Sumi server.
 ### Everywhere
 - Popup (`Alt+Shift+S`): timer & stopwatch controls, save this tab / window to any
   collection, quick tab tools, time on the current site.
-- Shortcuts: `Alt+Shift+P` timer, `Alt+Shift+W` stopwatch, `Alt+Shift+K` save
-  window, `Alt+Shift+L` save page to Later (change at `chrome://extensions/shortcuts`).
+- Shortcuts: `Alt+Shift+P` timer, `Alt+Shift+W` stopwatch, `Alt+Shift+L` save page to Later (change at `chrome://extensions/shortcuts`).
 
 ## Your data
 

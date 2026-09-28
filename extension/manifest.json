@@ -84,11 +84,7 @@
       "description": "Start / pause the stopwatch"
     },
     "save-window": {
-      "suggested_key": {
-        "default": "Alt+Shift+K",
-        "mac": "Alt+Shift+K"
-      },
-      "description": "Save this window's tabs as a collection"
+      "description": "Save this window's tabs as a collection (assign a key in chrome://extensions/shortcuts)"
     },
     "save-later": {
       "suggested_key": {

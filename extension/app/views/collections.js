@@ -20,7 +20,7 @@ export async function mount(el) {
       <header class="board-h">
         <input type="search" id="q" placeholder="Search saved tabs in every space…  ( / )" autocomplete="off">
         <button id="new-col">＋ Collection</button>
-        <button id="save-win" class="primary" title="Save all tabs in this window as a collection (Alt+Shift+K)">Save window</button>
+        <button id="save-win" class="primary" title="Save all tabs in this window as a collection">Save window</button>
         <div class="menu-wrap"><button id="more" class="ghost">⋯</button>
           <div class="menu" id="more-menu" hidden>
             <button data-m="expand">Expand all</button><button data-m="collapse">Collapse all</button>

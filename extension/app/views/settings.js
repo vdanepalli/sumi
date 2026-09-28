@@ -65,7 +65,7 @@ export async function mount(el) {
           <span class="sp"></span>
           <button type="button" class="danger" id="reset">Reset settings</button>
         </div>
-        <p class="small faint">Shortcuts: <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd> popup · <kbd>P</kbd> timer · <kbd>W</kbd> stopwatch · <kbd>K</kbd> save window. Change them at chrome://extensions/shortcuts.</p>
+        <p class="small faint">Shortcuts: <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd> popup · <kbd>P</kbd> timer · <kbd>W</kbd> stopwatch. Change them at chrome://extensions/shortcuts.</p>
       </fieldset>
     </form>`;
 
