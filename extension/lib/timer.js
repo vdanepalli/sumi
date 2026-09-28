@@ -22,8 +22,15 @@ async function lengthOf(mode) {
 }
 async function save(s) { await set('timer', s); await badge(); return s; }
 
-export async function start() {
-  const s = await state();
+// opts: { project: {type, id, title}, minutes } - start a focus session on something
+export async function start(opts = {}) {
+  let s = await state();
+  if (opts.project !== undefined || opts.minutes) {
+    if (s.running) await pause();
+    s = await state();
+    if (opts.project !== undefined) s.project = opts.project;
+    if (opts.minutes) { s.mode = 'focus'; s.remaining = s.total = opts.minutes * 60000; }
+  }
   if (s.running) return s;
   if (s.remaining <= 0) s.remaining = s.total = await lengthOf(s.mode);
   s.endsAt = Date.now() + s.remaining;
@@ -58,6 +65,15 @@ export async function complete(skipped = false) {
   if (was === 'focus' && !skipped) {
     s.cycle += 1;
     const mins = Math.round(s.total / 60000);
+    if (s.project) {
+      const pk = `${s.project.type}:${s.project.id}`;
+      await update('projectLog', {}, log => {
+        const d = dayKey();
+        const day = { ...(log[d] || {}) };
+        day[pk] = { title: s.project.title, type: s.project.type, minutes: (day[pk]?.minutes || 0) + mins };
+        return { ...log, [d]: day };
+      });
+    }
     await update('focusLog', {}, log => {
       const d = dayKey();
       const e = log[d] || { count: 0, minutes: 0 };
@@ -81,6 +97,8 @@ export async function complete(skipped = false) {
   return s;
 }
 
+export async function setProject(project) { const s = await state(); s.project = project || null; return save(s); }
+
 export async function isFocusing() { const s = await state(); return s.running && s.mode === 'focus'; }
 
 // ---------------- stopwatch ----------------
@@ -90,8 +108,9 @@ export const swElapsed = s => s.elapsed + (s.running ? Date.now() - s.startedAt 
 export const swActive = s => !!s && (s.running || s.elapsed > 0);
 async function swSave(s) { await set('stopwatch', s); await badge(); return s; }
 
-export async function swStart(label) {
+export async function swStart(label, project) {
   const s = await swState();
+  if (project !== undefined) s.project = project;
   if (s.running) return s;
   s.running = true;
   s.startedAt = Date.now();
@@ -120,7 +139,7 @@ export async function swReset(log = true) {
   if (log && t >= 60000) {
     await update('stopwatchLog', {}, l => {
       const d = dayKey();
-      return { ...l, [d]: [...(l[d] || []), { ms: t, label: s.label || '', at: Date.now() }] };
+      return { ...l, [d]: [...(l[d] || []), { ms: t, label: s.label || '', at: Date.now(), project: s.project || null }] };
     });
   }
   return swSave({ ...SW0 });

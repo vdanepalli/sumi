@@ -53,6 +53,27 @@ export async function mount(el) {
         <label>Tabs are stale after <input type="number" name="staleDays" min="1" max="90"> days</label>
       </fieldset>
 
+      <fieldset><legend>Smart tabs</legend>
+        <label>Auto-sleep tabs unused for <input type="number" name="autoSleepMin" min="0" max="1440"> min (0 = off)</label>
+        <label>Never auto-sleep (one per line)</label>
+        <textarea name="sleepExcluded" rows="2"></textarea>
+        <label>Nudge me above <input type="number" name="tabLimit" min="0" max="500"> open tabs (0 = off)</label>
+        <label>Save all windows every <input type="number" name="snapshotMin" min="5" max="240"> min (Sessions)</label>
+        <label>Auto-group rules, one per line: <code>url part = Group name</code></label>
+        <textarea name="groupRules" rows="3" data-raw placeholder="github.com/acme = Acme&#10;docs.google.com = Docs"></textarea>
+      </fieldset>
+
+      <fieldset><legend>Time awareness</legend>
+        <label>Productive sites (one per line)</label>
+        <textarea name="productive" rows="3"></textarea>
+        <label>Distracting sites (one per line)</label>
+        <textarea name="distracting" rows="3"></textarea>
+        <label>Daily limits, one per line: <code>site minutes</code></label>
+        <textarea name="siteLimits" rows="2" data-raw placeholder="youtube.com 45&#10;reddit.com 20"></textarea>
+        <label class="ck"><input type="checkbox" name="limitBlock"> Block a site for the rest of the day when its limit is used</label>
+        <label class="ck"><input type="checkbox" name="weeklyReview"> Weekly review notification on Mondays</label>
+      </fieldset>
+
       <fieldset><legend>Look</legend>
         <label class="ck"><input type="checkbox" name="clock24"> 24-hour clock</label>
         <label>Accent colour <input type="color" name="accent"></label>
@@ -82,7 +103,8 @@ export async function mount(el) {
     const el2 = e.target;
     if (!el2.name) return;
     let v = el2.type === 'checkbox' ? el2.checked : el2.type === 'number' ? Number(el2.value) : el2.value;
-    if (el2.tagName === 'TEXTAREA') v = v.split(/[\n,]/).map(s => s.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/.*$/, '')).filter(Boolean);
+    if (el2.tagName === 'TEXTAREA' && el2.hasAttribute('data-raw')) v = v.split('\n').map(s => s.trim()).filter(Boolean);
+    else if (el2.tagName === 'TEXTAREA') v = v.split(/[\n,]/).map(s => s.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/.*$/, '')).filter(Boolean);
     const next = await setSettings({ [el2.name]: v });
     if (el2.name === 'accent') applyAccent(next.accent);
     toast('Saved');

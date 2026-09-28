@@ -6,6 +6,7 @@ import { account, signIn, continueLocally, configured, syncNow } from '../lib/sy
 const VIEWS = {
   collections: () => import('./views/collections.js'),
   later: () => import('./views/later.js'),
+  sessions: () => import('./views/sessions.js'),
   focus: () => import('./views/focus.js'),
   insights: () => import('./views/insights.js'),
   tasks: () => import('./views/tasks.js'),
@@ -79,6 +80,22 @@ async function start() {
   laterBadge();
   syncNow(false).catch(() => {});
 }
+
+// command palette: Ctrl+K / Cmd+K anywhere in the app
+document.addEventListener('keydown', async e => {
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k' && !$('#app').hidden) {
+    e.preventDefault();
+    if ($('#pal-dlg')) return;
+    const d = document.createElement('dialog');
+    d.id = 'pal-dlg'; d.className = 'modal pal-dlg';
+    document.body.appendChild(d);
+    d.addEventListener('close', () => d.remove());
+    d.addEventListener('click', ev => { if (ev.target === d) d.close(); });
+    d.showModal();
+    const { mountPalette } = await import('../lib/palette.js');
+    mountPalette(d, { onDone: () => d.close() });
+  }
+});
 
 chrome.storage.onChanged.addListener(async (c, area) => {
   if (area !== 'local') return;

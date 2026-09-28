@@ -18,7 +18,19 @@ export const DEFAULT_SETTINGS = {
   openCardIn: 'new',            // 'new' tab | 'current' tab
   closeAfterSave: false,        // close tabs after saving a window to a collection
   // look
-  clock24: false, accent: '#8ab4f8', staleDays: 3
+  clock24: false, accent: '#8ab4f8', staleDays: 3,
+  // smart tabs
+  autoSleepMin: 0,              // unload tabs unused this long (0 = off)
+  sleepExcluded: ['mail.google.com', 'calendar.google.com', 'music.youtube.com', 'open.spotify.com'],
+  tabLimit: 60,                 // nudge when more tabs than this are open (0 = off)
+  groupRules: [],               // "url-part = Group name" lines
+  snapshotMin: 15,              // auto-save all windows every N minutes
+  // time awareness
+  productive: ['github.com', 'stackoverflow.com', 'docs.python.org', 'developer.mozilla.org', 'notion.so', 'claude.ai', 'chatgpt.com', 'arxiv.org', 'figma.com', 'linear.app'],
+  distracting: ['youtube.com', 'x.com', 'twitter.com', 'reddit.com', 'instagram.com', 'facebook.com', 'tiktok.com', 'netflix.com'],
+  siteLimits: [],               // "domain minutes" lines, e.g. "youtube.com 45"
+  limitBlock: true,             // block a site for the rest of the day once its limit is used
+  weeklyReview: true
 };
 
 export const uid = () => crypto.randomUUID();

@@ -29,6 +29,7 @@ export async function mount(el) {
             <button data-m="export">Export this space (Toby format)</button>
           </div></div>
       </header>
+      <div class="favs" id="favs"></div>
       <div class="frequent" id="frequent" title="Your most-used sites (last 30 days) - click to open, drag into a collection"></div>
       <div class="dropzone" id="dropzone">Drop a tab here to start a new collection</div>
       <div id="cols"></div>
@@ -63,7 +64,7 @@ export async function mount(el) {
   wireDrops();
 
   const onKey = e => {
-    if (e.target.closest('input, textarea, dialog')) return;
+    if (e.target.closest?.('input, textarea, dialog')) return;
     if (e.key === '/') { e.preventDefault(); $('#q').focus(); }
   };
   document.addEventListener('keydown', onKey);
@@ -83,7 +84,24 @@ export async function mount(el) {
 }
 function closeMenu(e) { const m = $('#more-menu'); if (m && !e.target.closest('.menu-wrap')) m.hidden = true; }
 const schedule = () => { clearTimeout(renderTimer); renderTimer = setTimeout(() => { renderSpaces(); renderBoard(); }, 80); };
-async function render() { await renderSpaces(); await renderBoard(); await renderTabs(); await renderFrequent(); }
+async function render() { await renderSpaces(); await renderBoard(); await renderTabs(); await renderFrequent(); await renderFavs(); }
+
+// starred saved tabs and collections, from every space
+async function renderFavs() {
+  const el = $('#favs');
+  if (!el) return;
+  const cards = (await C.cards()).filter(k => k.starred);
+  const cols = (await C.collections()).filter(c => c.starred);
+  el.hidden = !cards.length && !cols.length;
+  el.innerHTML = `<span class="favs-l">★ Favourites</span>` +
+    cols.map(c => `<div class="fav-c" data-fcol="${c.id}" title="Open all tabs in ${esc(c.name)}">▦ ${esc(c.name)}</div>`).join('') +
+    cards.map(k => `<div class="freq" data-fcard="${k.id}" title="${esc(k.url)}"><img src="${esc(k.fav || favicon(k.url))}" alt="" onerror="this.src='/icons/icon16.png'"><span>${esc(k.title)}</span></div>`).join('');
+  el.onclick = async e => {
+    const c = e.target.closest('[data-fcard]'); const col = e.target.closest('[data-fcol]');
+    if (c) C.openCard(cards.find(k => k.id === c.dataset.fcard), e.metaKey || e.ctrlKey ? 'new' : undefined);
+    if (col) C.openCards(await C.cards(col.dataset.fcol));
+  };
+}
 
 // most-used sites over the last 30 days, from time tracking
 async function renderFrequent() {
@@ -156,6 +174,7 @@ async function renderBoard() {
         <button class="ghost small" data-a="open" title="Open all tabs">Open ${cs.length > 1 ? 'all' : ''}</button>
         <button class="ghost small" data-a="window" title="Open all in a new window">New window</button>
         <button class="ghost small" data-a="add-current" title="Add the current tab">＋ Tab</button>
+        <button class="ghost icon star ${c.starred ? 'on' : ''}" data-a="star" title="Favourite">${c.starred ? '★' : '☆'}</button>
         <button class="ghost icon" data-a="del" title="Delete collection">✕</button>
       </header>
       <div class="cards" data-cards="${c.id}">
@@ -171,7 +190,8 @@ function cardHtml(k) {
   return `<div class="card-t" draggable="true" data-card="${k.id}" title="${esc(k.url)}">
     <img src="${esc(k.fav || favicon(k.url))}" alt="" loading="lazy" onerror="this.src='/icons/icon16.png'">
     <div class="ct"><div class="tt">${esc(k.title)}</div><div class="dd">${esc(k.note || dom)}</div></div>
-    <div class="ca"><button class="ghost icon" data-ca="edit" title="Edit">✎</button><button class="ghost icon" data-ca="del" title="Remove">✕</button></div>
+    ${k.starred ? '<span class="kstar">★</span>' : ''}
+    <div class="ca"><button class="ghost icon" data-ca="star" title="${k.starred ? 'Remove from favourites' : 'Add to favourites'}">${k.starred ? '★' : '☆'}</button><button class="ghost icon" data-ca="edit" title="Edit">✎</button><button class="ghost icon" data-ca="del" title="Remove">✕</button></div>
   </div>`;
 }
 
@@ -183,6 +203,7 @@ function wireBoard(cols, allCards) {
       const k = allCards.find(x => x.id === card.dataset.card);
       const a = e.target.closest('[data-ca]')?.dataset.ca;
       if (a === 'del') { await C.deleteCards(k.id); return; }
+      if (a === 'star') { await C.patchCard(k.id, { starred: !k.starred }); return; }
       if (a === 'edit') return editCard(k);
       return C.openCard(k, e.metaKey || e.ctrlKey ? 'new' : undefined);
     }
@@ -191,6 +212,7 @@ function wireBoard(cols, allCards) {
     const a = e.target.closest('[data-a]')?.dataset.a;
     const cs = allCards.filter(k => k.collectionId === c.id).sort((x, y) => (x.order ?? 0) - (y.order ?? 0));
     if (a === 'collapse') await C.patchCollection(c.id, { collapsed: !c.collapsed });
+    if (a === 'star') await C.patchCollection(c.id, { starred: !c.starred });
     if (a === 'rename') { const n = await ask({ title: 'Rename collection', value: c.name }); if (n) await C.patchCollection(c.id, { name: n }); }
     if (a === 'open') await C.openCards(cs);
     if (a === 'window') await C.openCards(cs, { newWindow: true });

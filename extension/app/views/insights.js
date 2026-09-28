@@ -4,6 +4,8 @@
 import { $, $$, esc, dur, favicon, send, toast, confirmBox } from '../../lib/ui.js';
 import { update, dayKey, daysAgo, deviceId } from '../../lib/store.js';
 import { allDevices } from '../../lib/sync.js';
+import { getSettings, get } from '../../lib/store.js';
+import { categoryOf, weekSummary } from '../../lib/smart.js';
 
 const RANGES = [['today', 'Today'], ['yesterday', 'Yesterday'], ['7', '7 days'], ['30', '30 days'], ['90', '90 days'], ['year', 'This year'], ['all', 'All time'], ['custom', 'Custom']];
 let state = { range: '7', from: daysAgo(6), to: dayKey(), device: 'all', q: '', show: 25 };
@@ -19,6 +21,8 @@ export async function mount(el) {
       <button id="csv" class="ghost">Export CSV</button>
     </header>
     <div class="kpis big" id="kpis"></div>
+    <section class="card"><h2>Productive vs distracting <span class="sp"></span><span class="small faint">edit categories in Settings</span></h2><div class="catbar" id="catbar"></div><div class="catlegend" id="catlegend"></div></section>
+    <section class="card"><h2>Weekly review</h2><div class="review" id="review"></div></section>
     <section class="card"><h2>Time per <span id="bucket">day</span></h2><div class="chart" id="chart"></div></section>
     <section class="card"><h2>Last 12 months</h2><div class="heat" id="heat"></div><div class="small faint" id="heat-cap"></div></section>
     <section class="card">
@@ -82,7 +86,36 @@ function daysBetween(a, b) {
   return out;
 }
 
-function render() { renderKpis(); renderChart(); renderHeat(); renderSites(); }
+function render() { renderKpis(); renderCats(); renderChart(); renderHeat(); renderSites(); renderReview(); }
+
+let cfgCache = null;
+async function renderCats() {
+  cfgCache = cfgCache || await getSettings();
+  const { t } = totals();
+  const cat = { productive: 0, neutral: 0, distracting: 0 };
+  for (const [d, s] of Object.entries(t)) cat[categoryOf(d, cfgCache)] += s;
+  const total = cat.productive + cat.neutral + cat.distracting || 1;
+  const colors = { productive: 'var(--good)', neutral: '#555', distracting: 'var(--bad)' };
+  $('#catbar').innerHTML = Object.entries(cat).map(([k, v]) => `<i style="width:${(100 * v) / total}%;background:${colors[k]}" title="${k}: ${dur(v)}"></i>`).join('');
+  $('#catlegend').innerHTML = Object.entries(cat).map(([k, v]) => `<span><i style="background:${colors[k]}"></i>${k} <b>${dur(v)}</b> <span class="faint">${Math.round((100 * v) / total)}%</span></span>`).join('');
+}
+
+async function renderReview() {
+  cfgCache = cfgCache || await getSettings();
+  const later = Object.values(await get('later', {})).filter(x => !x.deleted);
+  const focus = {};
+  for (const log of Object.values(await allDevices('focusLog'))) for (const [d, v] of Object.entries(log)) focus[d] = { minutes: (focus[d]?.minutes || 0) + v.minutes };
+  const a = weekSummary(data, focus, later, cfgCache, 0);
+  const b = weekSummary(data, focus, later, cfgCache, 1);
+  const delta = (x, y, fmt) => { if (!y) return ''; const p = Math.round(((x - y) / y) * 100); return `<small class="${p >= 0 ? 'up' : 'down'}">${p >= 0 ? '▲' : '▼'} ${Math.abs(p)}% vs last week</small>`; };
+  $('#review').innerHTML = [
+    ['Online', dur(a.total), delta(a.total, b.total)],
+    ['Productive share', `${a.score}%`, b.total ? `<small>${a.score - b.score >= 0 ? '▲' : '▼'} ${Math.abs(a.score - b.score)} pts</small>` : ''],
+    ['Focused', dur(a.focus * 60), delta(a.focus, b.focus)],
+    ['Later finished', a.done, b.done ? `<small>${b.done} the week before</small>` : '']
+  ].map(([k, v, s]) => `<div><span>${k}</span><b>${v}</b>${s}</div>`).join('') +
+    `<p class="small muted">Top sites this week: ${a.top.map(([d, s]) => `${esc(d)} (${dur(s)})`).join(', ') || '—'}</p>`;
+}
 
 function totals() {
   const t = {}; const days = {};

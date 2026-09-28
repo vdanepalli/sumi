@@ -9,12 +9,12 @@
   const rec = (o) => ({ ...o, updatedAt: now });
   const spaces = { s1: rec({ id: 's1', name: 'Work', order: 0 }), s2: rec({ id: 's2', name: 'Learning', order: 1 }), s3: rec({ id: 's3', name: 'Personal', order: 2 }) };
   const cols = [['c1','s1','Sprint 42 — API redesign'],['c2','s1','Code review queue'],['c3','s1','Design references'],['c4','s2','Rust async']];
-  const collections = {}; cols.forEach(([id, sp, name], i) => collections[id] = rec({ id, spaceId: sp, name, order: i, collapsed: false }));
+  const collections = {}; cols.forEach(([id, sp, name], i) => collections[id] = rec({ id, spaceId: sp, name, order: i, collapsed: false, starred: i === 1 }));
   const cardData = { c1: [['OpenAPI spec draft','https://github.com/acme/api/pull/412'],['REST vs gRPC tradeoffs','https://cloud.google.com/blog/products/api-management'],['Pagination patterns','https://stackoverflow.com/questions/13872273'],['Rate limiting design','https://stripe.com/blog/rate-limiters'],['Idempotency keys','https://brandur.org/idempotency-keys']],
     c2: [['PR #418 auth middleware','https://github.com/acme/api/pull/418'],['PR #421 retries','https://github.com/acme/api/pull/421']],
     c3: [['Linear changelog','https://linear.app/changelog'],['Vercel dashboard','https://vercel.com/dashboard'],['Raycast','https://www.raycast.com/']],
     c4: [['Async book','https://rust-lang.github.io/async-book/'],['Tokio tutorial','https://tokio.rs/tokio/tutorial']] };
-  const cards = {}; Object.entries(cardData).forEach(([c, list]) => list.forEach(([title, url], i) => { const id = c + i; cards[id] = rec({ id, collectionId: c, title, url, note: i === 0 && c === 'c1' ? 'Discuss Thursday' : '', order: i }); }));
+  const cards = {}; Object.entries(cardData).forEach(([c, list]) => list.forEach(([title, url], i) => { const id = c + i; cards[id] = rec({ id, collectionId: c, title, url, note: i === 0 && c === 'c1' ? 'Discuss Thursday' : '', order: i, starred: (c === 'c1' && i < 2) || (c === 'c3' && i === 0) }); }));
   const tasks = {}; [['Review PR #418', false, true], ['Write API migration notes', false, false], ['Book dentist', true, false]].forEach(([text, done, high], i) => tasks['t' + i] = rec({ id: 't' + i, text, done, high, order: i }));
   const L = (id, title, url, kind, dueH, status, extra = {}) => rec({ id, title, url, kind, due: dueH === null ? null : now + dueH * 3600000, remindAt: dueH === null ? null : now + (dueH - 1) * 3600000, status, priority: 'normal', minutes: null, tags: [], note: '', created: now - 86400000, thumb: '', author: '', playlist: false, ...extra });
   const later = Object.fromEntries([

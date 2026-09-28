@@ -4,6 +4,8 @@ import { $, $$, esc, clock, dur, send, toast } from '../../lib/ui.js';
 import { get, getSettings, setSettings, dayKey, daysAgo } from '../../lib/store.js';
 import { leftMs, modeLabel, swElapsed } from '../../lib/timer.js';
 import { allDevices } from '../../lib/sync.js';
+import { all } from '../../lib/store.js';
+import { items as laterItems } from '../../lib/later.js';
 
 const CIRC = 2 * Math.PI * 88;
 let timer; let sw; let cfg;
@@ -16,6 +18,7 @@ export async function mount(el) {
     <div class="focus-grid">
       <section class="card pomo" id="pomo">
         <h2>Pomodoro <span class="sp"></span><span class="small faint" id="cycle"></span></h2>
+        <div class="proj"><span class="muted">Focus on</span><select id="project"><option value="">Nothing in particular</option></select></div>
         <div class="ring-wrap big">
           <svg viewBox="0 0 200 200" class="ring"><circle class="bg" cx="100" cy="100" r="88"/><circle class="fg" id="ring" cx="100" cy="100" r="88"/></svg>
           <div class="ring-center"><div class="mode" id="mode"></div><div class="left" id="left"></div></div>
@@ -42,6 +45,8 @@ export async function mount(el) {
         <div class="bar goal-bar"><i id="goal-bar"></i></div>
         <div class="chart30" id="chart30"></div>
         <div class="kpis" id="kpis"></div>
+        <h3 class="sub">Time per project · last 30 days</h3>
+        <ul class="list" id="projects"></ul>
         <h3 class="sub">Stopwatch today</h3>
         <ul class="list" id="swlog"></ul>
       </section>
@@ -59,6 +64,21 @@ export async function mount(el) {
   $('#sw-lap').onclick = () => act('stopwatch', 'lap');
   $('#sw-stop').onclick = () => act('stopwatch', 'reset');
   $('#sw-discard').onclick = () => act('stopwatch', 'discard');
+
+  // project picker: open tasks and Later items
+  const tasks = (await all('tasks')).filter(t => !t.done);
+  const later = (await laterItems()).filter(i => i.status !== 'done');
+  $('#project').innerHTML += `<optgroup label="Tasks">${tasks.map(t => `<option value="task:${t.id}">${esc(t.text)}</option>`).join('')}</optgroup>
+    <optgroup label="Later">${later.map(i => `<option value="later:${i.id}">${esc(i.title.slice(0, 60))}</option>`).join('')}</optgroup>`;
+  const cur = timer?.project;
+  if (cur) { if (![...$('#project').options].some(o => o.value === `${cur.type}:${cur.id}`)) $('#project').add(new Option(cur.title, `${cur.type}:${cur.id}`)); $('#project').value = `${cur.type}:${cur.id}`; }
+  $('#project').onchange = e => {
+    const v = e.target.value;
+    const opt = e.target.selectedOptions[0];
+    const project = v ? { type: v.split(':')[0], id: v.split(':').slice(1).join(':'), title: opt.textContent } : null;
+    act('timer', 'setProject', { project });
+    toast(project ? `Focus sessions now count toward “${project.title}”` : 'No project');
+  };
 
   const onStore = (c, area) => {
     if (area !== 'local') return;
@@ -115,6 +135,15 @@ async function history() {
   const week = [...Array(7)].reduce((a, _, i) => a + (byDay[daysAgo(i)]?.minutes || 0), 0);
   $('#kpis').innerHTML = [['Streak', `${streak} day${streak === 1 ? '' : 's'}`], ['This week', dur(week * 60)], ['All time', dur(totalMin * 60)], ['Sessions', Object.values(byDay).reduce((a, v) => a + v.count, 0)]]
     .map(([k, v]) => `<div><b>${v}</b><span>${k}</span></div>`).join('');
+  const pDevs = await allDevices('projectLog');
+  const proj = {};
+  for (const log of Object.values(pDevs)) for (const [d, v] of Object.entries(log)) if (d >= daysAgo(29)) for (const [k, p] of Object.entries(v)) { proj[k] = proj[k] || { title: p.title, type: p.type, minutes: 0 }; proj[k].minutes += p.minutes; }
+  const swAll = await allDevices('stopwatchLog');
+  for (const log of Object.values(swAll)) for (const [d, list] of Object.entries(log)) if (d >= daysAgo(29)) for (const x of list) if (x.project) { const k = `${x.project.type}:${x.project.id}`; proj[k] = proj[k] || { title: x.project.title, type: x.project.type, minutes: 0 }; proj[k].minutes += Math.round(x.ms / 60000); }
+  const prows = Object.values(proj).sort((a, b) => b.minutes - a.minutes);
+  const pmax = prows[0]?.minutes || 1;
+  $('#projects').innerHTML = prows.slice(0, 10).map(p => `<li><span class="t">${esc(p.title)} <span class="faint small">${p.type}</span></span><div class="bar" style="width:30%"><i style="width:${(100 * p.minutes) / pmax}%"></i></div><b>${dur(p.minutes * 60)}</b></li>`).join('')
+    || '<li class="muted small">Pick something in “Focus on”, or press ▶ Focus on a task or Later item.</li>';
   const swDevs = await allDevices('stopwatchLog');
   const todays = Object.values(swDevs).flatMap(l => l[dayKey()] || []).sort((a, b) => b.at - a.at);
   $('#swlog').innerHTML = todays.map(x => `<li><span class="t">${esc(x.label || 'Stopwatch')}</span><span class="muted">${new Date(x.at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</span><b>${clock(x.ms)}</b></li>`).join('') || '<li class="muted small">Stopped sessions of a minute or more appear here.</li>';

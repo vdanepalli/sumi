@@ -10,7 +10,7 @@ const UPLOAD = 'https://www.googleapis.com/upload/drive/v3/files';
 // record collections merged item by item
 export const RECORDS = ['spaces', 'collections', 'cards', 'tasks', 'later'];
 // per-device day maps merged by device
-const DEVICE_MAPS = { usage: 'usage', focusLog: 'focusLog', stopwatchLog: 'stopwatchLog' };
+const DEVICE_MAPS = { usage: 'usage', focusLog: 'focusLog', stopwatchLog: 'stopwatchLog', projectLog: 'projectLog' };
 
 export function configured() {
   const id = chrome.runtime.getManifest().oauth2?.client_id || '';
@@ -77,7 +77,7 @@ function mergeDevices(a = {}, b = {}) {
       const cur = out[dev][day];
       if (cur === undefined) out[dev][day] = v;
       else if (Array.isArray(v)) out[dev][day] = v.length > cur.length ? v : cur;
-      else if (typeof v === 'object') for (const [k, n] of Object.entries(v)) cur[k] = Math.max(cur[k] || 0, n);
+      else if (typeof v === 'object') for (const [k, n] of Object.entries(v)) cur[k] = typeof n === 'object' ? ((cur[k]?.minutes || 0) >= (n?.minutes || 0) ? cur[k] : n) : Math.max(cur[k] || 0, n);
     }
   }
   return out;

@@ -26,6 +26,7 @@ export async function mount(el) {
       <button id="yt" class="ghost" title="Save every open YouTube tab to Watch later">Save open YouTube tabs</button>
     </div>
     <div class="later-stats" id="stats"></div>
+    <div id="upnext"></div>
     <div id="list"></div>`;
 
   $('#add').onsubmit = async e => {
@@ -54,7 +55,9 @@ export async function mount(el) {
   return () => { chrome.storage.onChanged.removeListener(onStore); clearInterval(iv); };
 }
 
+let progress = {};
 async function render() {
+  progress = (await chrome.storage.local.get('laterProgress')).laterProgress || {};
   const all = await L.items();
   const now = Date.now();
   const open = all.filter(i => i.status !== 'done');
@@ -65,6 +68,17 @@ async function render() {
     ['Overdue', open.filter(i => i.due && i.due < now).length],
     ['Done this week', all.filter(i => i.doneAt && i.doneAt > weekAgo).length]
   ].map(([k, v]) => `<span class="chip">${k} <b>${v}</b></span>`).join('');
+  // up next: in progress first, then the most urgent deadline, then high priority, then newest
+  const next = [...open].sort((a, b) => (b.status === 'doing') - (a.status === 'doing') || (a.due || Infinity) - (b.due || Infinity) || (b.priority === 'high') - (a.priority === 'high') || b.created - a.created)[0];
+  $('#upnext').innerHTML = next ? `<div class="upnext" data-id="${next.id}"><span class="k">Up next</span>${next.thumb ? `<img src="${esc(next.thumb)}" alt="">` : ''}
+    <div class="lt"><div class="tt">${esc(next.title)}</div><div class="dd">${L.KINDS[next.kind]}${next.minutes ? ` · ${next.minutes} min` : ''}${next.due ? ` · ${L.relTime(next.due)}` : ''}${progress[next.id] ? ` · ${progress[next.id].pct}% done` : ''}</div></div>
+    <button class="primary" data-a="focus">▶ Start with focus timer</button><button data-a="open">Open</button></div>` : '';
+  $('#upnext').onclick = async e => {
+    const b = e.target.closest('[data-a]'); if (!b || !next) return;
+    if (b.dataset.a === 'focus') await chrome.runtime.sendMessage({ type: 'timer', action: 'start', minutes: next.minutes || undefined, project: { type: 'later', id: next.id, title: next.title } });
+    chrome.tabs.create({ url: next.url });
+    if (next.status === 'todo') await L.patch(next.id, { status: 'doing' });
+  };
   $$('#kinds button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.k === state.kind)));
   const shown = all.filter(i => (state.kind === 'all' || i.kind === state.kind) &&
     (state.showDone || i.status !== 'done') &&
@@ -82,6 +96,11 @@ async function render() {
     if (a === 'status') await L.patch(it.id, { status: it.status === 'todo' ? 'doing' : it.status === 'doing' ? 'done' : 'todo' });
     else if (a === 'done') { await L.patch(it.id, { status: it.status === 'done' ? 'todo' : 'done' }); }
     else if (a === 'edit') edit(it);
+    else if (a === 'focus') {
+      await chrome.runtime.sendMessage({ type: 'timer', action: 'start', minutes: it.minutes || undefined, project: { type: 'later', id: it.id, title: it.title } });
+      if (it.status === 'todo') await L.patch(it.id, { status: 'doing' });
+      chrome.tabs.create({ url: it.url });
+    }
     else if (a === 'del') { if (await confirmBox('Remove this item?', it.title, 'Remove')) await L.del(it.id); }
     else if (!e.target.closest('button, a')) { chrome.tabs.create({ url: it.url }); if (it.status === 'todo') await L.patch(it.id, { status: 'doing' }); }
   };
@@ -95,8 +114,8 @@ function itemHtml(i) {
     ${i.thumb ? `<img class="thumb" src="${esc(i.thumb)}" alt="" loading="lazy">` : `<img class="fav" src="${favicon(i.url)}" alt="">`}
     <div class="lt"><div class="tt">${i.priority === 'high' ? '<span class="hi">!</span> ' : ''}${esc(i.title)}${i.playlist ? ' <span class="chip">playlist</span>' : ''}</div>
       <div class="dd"><span class="k k-${i.kind}">${L.KINDS[i.kind]}</span> ${esc(i.author || domainOf(i.url) || '')}${i.minutes ? ` · ${i.minutes} min` : ''}${i.tags.length ? ' · ' + i.tags.map(t => '#' + esc(t)).join(' ') : ''}${i.note ? ` · ${esc(i.note.slice(0, 80))}` : ''}</div></div>
-    ${rem}${due}
-    <div class="la"><button class="ghost small" data-a="done">${i.status === 'done' ? 'Undo' : 'Done'}</button><button class="ghost icon" data-a="edit" title="Edit">✎</button><button class="ghost icon" data-a="del" title="Remove">✕</button></div>
+    ${progress[i.id] && i.status !== 'done' ? `<span class="prog" title="${progress[i.id].pct}% read / watched"><i style="width:${progress[i.id].pct}%"></i></span>` : ''}${rem}${due}
+    <div class="la"><button class="ghost small" data-a="focus" title="Start a focus session on this">▶ Focus</button><button class="ghost small" data-a="done">${i.status === 'done' ? 'Undo' : 'Done'}</button><button class="ghost icon" data-a="edit" title="Edit">✎</button><button class="ghost icon" data-a="del" title="Remove">✕</button></div>
   </div>`;
 }
 

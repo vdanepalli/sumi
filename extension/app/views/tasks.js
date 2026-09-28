@@ -41,13 +41,14 @@ async function render() {
       <button class="check" data-a="done" aria-label="Complete"></button>
       <span class="tx" data-a="edit">${esc(t.text)}</span>
       ${t.high ? '<span class="chip warn">high</span>' : ''}${t.today ? '<span class="chip">today</span>' : ''}
-      <button class="ghost icon" data-a="del" title="Delete">✕</button></li>`).join('') || `<li class="muted small">${filter === 'done' ? 'Nothing completed yet.' : 'All clear.'}</li>`;
+      <button class="ghost small" data-a="focus" title="Start a focus session on this task">▶ Focus</button><button class="ghost icon" data-a="del" title="Delete">✕</button></li>`).join('') || `<li class="muted small">${filter === 'done' ? 'Nothing completed yet.' : 'All clear.'}</li>`;
   $('#list').onclick = async e => {
     const li = e.target.closest('li[data-id]'); if (!li) return;
     const t = items.find(x => x.id === li.dataset.id);
     const a = e.target.closest('[data-a]')?.dataset.a;
     if (a === 'done') await put('tasks', { ...t, done: !t.done, doneAt: Date.now() });
     if (a === 'del') await remove('tasks', t.id);
+    if (a === 'focus') { await chrome.runtime.sendMessage({ type: 'timer', action: 'start', project: { type: 'task', id: t.id, title: t.text } }); toast(`Focusing on “${t.text}”`); }
     if (a === 'edit') {
       const span = e.target.closest('.tx');
       span.contentEditable = 'true'; span.focus();

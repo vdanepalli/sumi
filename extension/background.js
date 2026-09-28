@@ -4,6 +4,7 @@ import * as T from './lib/timer.js';
 import { getSettings, update, dayKey, domainOf, matchesDomain } from './lib/store.js';
 import { syncNow, RECORDS } from './lib/sync.js';
 import * as L from './lib/later.js';
+import * as SM from './lib/smart.js';
 
 // ---------------- install / startup ----------------
 chrome.runtime.onInstalled.addListener(async ({ reason }) => {
@@ -13,6 +14,7 @@ chrome.runtime.onInstalled.addListener(async ({ reason }) => {
   await injectWidgetEverywhere();
   makeMenus();
   scheduleReminders();
+  chrome.alarms.create('maintain', { periodInMinutes: 5 });
   if (reason === 'install') chrome.tabs.create({ url: 'app/app.html#welcome' });
 });
 chrome.runtime.onStartup.addListener(async () => {
@@ -20,13 +22,15 @@ chrome.runtime.onStartup.addListener(async () => {
   chrome.alarms.create('sync', { periodInMinutes: 15 });
   await T.badge();
   scheduleReminders();
+  chrome.alarms.create('maintain', { periodInMinutes: 5 });
+  SM.snapshot('startup').catch(() => {});
   syncNow(false).catch(() => {});
 });
 
 // tabs opened before the extension was installed/updated get the floating widget too
 async function injectWidgetEverywhere() {
   const tabs = await chrome.tabs.query({ url: ['http://*/*', 'https://*/*'] });
-  for (const t of tabs) chrome.scripting.executeScript({ target: { tabId: t.id }, files: ['content/widget.js'] }).catch(() => {});
+  for (const t of tabs) chrome.scripting.executeScript({ target: { tabId: t.id }, files: ['content/widget.js', 'content/progress.js'] }).catch(() => {});
 }
 
 // ---------------- time per site ----------------
@@ -47,6 +51,8 @@ async function flush() {
       day[cur.domain] = (day[cur.domain] || 0) + secs;
       return { ...u, [d]: day }; // history is kept forever (a year is ~0.5 MB)
     });
+    await SM.checkLimit(cur.domain);
+    if (await SM.overLimit(cur.domain)) { const [t] = await chrome.tabs.query({ active: true, lastFocusedWindow: true }); if (t) await guard(t); }
   }
   await chrome.storage.session.set({ cur: { ...cur, since: now } });
 }
@@ -69,16 +75,21 @@ chrome.tabs.onActivated.addListener(async ({ tabId }) => {
   if (tab) await guard(tab);
 });
 chrome.tabs.onUpdated.addListener(async (tabId, info, tab) => {
+  if (info.status === 'complete') SM.applyGroupRules(tab).catch(() => {});
   if (!info.url) return;
   if (tab.active) await setFocus(tab.url);
   await guard(tab);
 });
+chrome.windows.onRemoved.addListener(() => SM.snapshot('window closed').catch(() => {}));
 chrome.windows.onFocusChanged.addListener(async wid => { if (wid === chrome.windows.WINDOW_ID_NONE) await setFocus(null); else await refreshFocus(); });
 chrome.idle.onStateChanged.addListener(async st => { if (st === 'active') await refreshFocus(); else await setFocus(null); });
 getSettings().then(c => chrome.idle.setDetectionInterval(Math.max(15, c.idleSec)));
 
 // ---------------- focus-time blocking ----------------
 async function guard(tab) {
+  const dom = domainOf(tab.url || '');
+  const over = await SM.overLimit(dom);
+  if (over) return chrome.tabs.update(tab.id, { url: chrome.runtime.getURL(`pages/blocked.html?limit=${over.min}&u=${encodeURIComponent(tab.url)}`) });
   const cfg = await getSettings();
   if (!cfg.blockDuringFocus || !(await T.isFocusing())) return;
   const d = domainOf(tab.url || '');
@@ -100,6 +111,13 @@ chrome.alarms.onAlarm.addListener(async a => {
   else if (a.name === 'usage-flush') await flush();
   else if (a.name === 'sync' || a.name === 'sync-soon') { await flush(); syncNow(false).catch(() => {}); }
   else if (a.name.startsWith('later:')) await remind(a.name.slice(6));
+  else if (a.name === 'maintain') {
+    const cfg = await getSettings();
+    if (Date.now() - (await chrome.storage.local.get('lastSnapshot')).lastSnapshot >= cfg.snapshotMin * 60000 || !(await chrome.storage.local.get('lastSnapshot')).lastSnapshot) await SM.snapshot('auto');
+    await SM.autoSleep();
+    await SM.tabNudge();
+    await SM.weeklyReview();
+  }
 });
 
 // ---------------- keyboard ----------------
@@ -121,14 +139,15 @@ chrome.commands.onCommand.addListener(async cmd => {
 
 // ---------------- messages ----------------
 const ACTIONS = {
-  timer: { toggle: T.toggle, start: T.start, pause: T.pause, reset: m => T.reset(m.mode), skip: () => T.complete(true), state: T.state },
-  stopwatch: { toggle: T.swToggle, start: m => T.swStart(m.label), pause: T.swPause, lap: T.swLap, reset: () => T.swReset(true), discard: () => T.swReset(false), state: T.swState }
+  timer: { toggle: T.toggle, start: m => T.start({ project: m.project, minutes: m.minutes }), setProject: m => T.setProject(m.project), pause: T.pause, reset: m => T.reset(m.mode), skip: () => T.complete(true), state: T.state },
+  stopwatch: { toggle: T.swToggle, start: m => T.swStart(m.label, m.project), pause: T.swPause, lap: T.swLap, reset: () => T.swReset(true), discard: () => T.swReset(false), state: T.swState }
 };
 chrome.runtime.onMessage.addListener((msg, sender, reply) => {
   (async () => {
     if (ACTIONS[msg.type]) return ACTIONS[msg.type][msg.action](msg);
     if (msg.type === 'flush') { await flush(); return true; }
     if (msg.type === 'sync') return syncNow(true);
+    if (msg.type === 'snapshot') return SM.snapshot('manual');
     if (msg.type === 'open-app') return chrome.tabs.create({ url: chrome.runtime.getURL('app/app.html' + (msg.hash || '')) });
     return null;
   })().then(r => reply({ ok: true, data: r }), e => reply({ ok: false, error: e.message }));
@@ -191,6 +210,8 @@ async function remind(id) {
   await L.patch(id, { reminded: true });
 }
 chrome.notifications.onButtonClicked.addListener(async (nid, btn) => {
+  if (nid === 'nudge') return chrome.tabs.create({ url: chrome.runtime.getURL('app/app.html#collections') });
+  if (nid === 'review') return chrome.tabs.create({ url: chrome.runtime.getURL('app/app.html#insights') });
   if (!nid.startsWith('later:')) return;
   const id = nid.slice(6);
   chrome.notifications.clear(nid);

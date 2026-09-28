@@ -46,3 +46,13 @@ kbd { font: 11px var(--mono); padding: 1px 6px; border: 1px solid var(--line-2);
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-thumb { background: #222; border-radius: 8px; }
 [hidden] { display: none !important; }
+/* command palette */
+.pal { display: grid; gap: 8px; }
+.pal-q { font-size: 15px !important; padding: 10px 12px !important; }
+.pal-list { list-style: none; margin: 0; padding: 0; max-height: 380px; overflow: auto; }
+.pal-list li { display: flex; align-items: center; gap: 10px; padding: 7px 9px; border-radius: 8px; cursor: pointer; min-width: 0; }
+.pal-list li.sel, .pal-list li:hover { background: #1a1a1a; }
+.pal-list img, .pal-list .pi { width: 16px; height: 16px; flex: none; text-align: center; color: var(--muted); font-size: 13px; }
+.pal-list .pt { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 13.5px; }
+.pal-list .pt small { color: var(--faint); margin-left: 8px; font-size: 11.5px; }
+.pal-list .pk { font-size: 10.5px; color: var(--faint); text-transform: uppercase; letter-spacing: .05em; flex: none; }

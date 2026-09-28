@@ -4,6 +4,8 @@ import { leftMs, modeLabel, swElapsed } from '../lib/timer.js';
 import * as C from '../lib/collections.js';
 import * as Tabs from '../lib/tabs.js';
 import * as L from '../lib/later.js';
+import { mountPalette } from '../lib/palette.js';
+mountPalette($('#palette'), { onDone: () => window.close() });
 
 const cfg = await getSettings();
 applyAccent(cfg.accent);

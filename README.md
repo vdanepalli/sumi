@@ -11,6 +11,24 @@ folder in their Google Drive) — there is no Sumi server.
 
 ## Features
 
+### Command palette
+`Ctrl/Cmd+K` in Sumi, or the toolbar popup (`Alt+Shift+S`): one search over open
+tabs, favourites, saved tabs, collections, Later and tasks, plus actions (start
+focus, save window, close duplicates, go to …). ↑/↓, Enter, Esc.
+
+### Favourites
+Star any saved tab or collection (☆). Favourites appear at the top of Collections
+and first in the palette.
+
+### Sessions (auto-save)
+Every window is snapshotted every 15 min (configurable), when a window closes and
+when Chrome starts; the last 30 are kept. Restore everything, one window, or save
+a snapshot as collections — nothing is lost after a crash or an accidental close.
+
+### Smart tabs
+Auto-sleep tabs unused for N minutes (with exceptions), a nudge above N open tabs,
+and auto-group rules (`github.com/acme = Acme`).
+
 ### Collections (the new tab)
 - **Spaces → Collections → saved tabs**, like Toby. Rename, collapse, reorder
   collections by dragging their headers, move a collection to another space by
@@ -35,6 +53,8 @@ folder in their Google Drive) — there is no Sumi server.
 - Deadline ("read / watch by") with a reminder (at the deadline, 15 min – 2 days
   before). Reminder notifications have **Open now** and **Snooze 1 hour**;
   reminders missed while Chrome was closed fire on next start.
+- **Reading progress**: scroll position / video time is remembered on saved pages,
+  with a *Resume* prompt; progress bars in the list; **Up next** card.
 - Status (not started → in progress → done), priority, estimated minutes, tags,
   notes. Grouped as Overdue / Today / This week / Later / No deadline / Done, with
   filters, search, and a due-count badge in the sidebar.
@@ -53,13 +73,23 @@ folder in their Google Drive) — there is no Sumi server.
   and window), click the dot to minimise, double-click to open Sumi. Can be hidden
   per site.
 
+### Focus projects
+Pick what a session is for ("Focus on" a task or Later item, or ▶ Focus on any of
+them). Minutes are logged per project, shown in Focus → Time per project and on the
+floating widget.
+
 ### Insights
 - Time per website, **kept permanently** (not just 7 days), merged across all your
   signed-in computers (or this device only).
 - Ranges: today, yesterday, 7 / 30 / 90 days, this year, all time, custom dates.
 - Totals with change vs the previous period, daily average, top site; chart by
   day / week / month; 12-month heatmap; full per-site table (share, days, average);
-  CSV export; delete a site's history. Counts only the tab you are looking at and
+  CSV export; delete a site's history.
+- Productive / neutral / distracting split (edit the site lists in Settings).
+- **Daily site limits** (`youtube.com 45`): warnings at 80% and 100%, optional
+  block until midnight.
+- **Weekly review**: this week vs last (time online, productive share, focus
+  hours, Later items finished, top sites), plus a Monday notification. Counts only the tab you are looking at and
   pauses when idle or locked; sites can be excluded.
 
 ### Tasks

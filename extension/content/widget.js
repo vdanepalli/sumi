@@ -51,7 +51,7 @@
     if (tActive(timer)) {
       const color = timer.mode === 'focus' ? '#e5736b' : '#6cc28b';
       rows.push(`<div class="row ${timer.running ? '' : 'paused'}"><span class="dot" data-a="min" style="background:${color}" title="Minimise"></span>
-        <span class="lbl">${timer.mode === 'focus' ? 'Focus' : timer.mode === 'short' ? 'Break' : 'Long break'}</span>
+        <span class="lbl" title="${timer.project ? String(timer.project.title).replace(/"/g, '') : ''}">${timer.mode === 'focus' ? (timer.project ? String(timer.project.title).replace(/[<>&"]/g, '').slice(0, 18) : 'Focus') : timer.mode === 'short' ? 'Break' : 'Long break'}</span>
         <span class="t" data-k="timer">${fmt(tLeft(timer))}</span>
         <button data-a="timer:toggle" title="${timer.running ? 'Pause' : 'Resume'}">${timer.running ? '❚❚' : '▶'}</button>
         <button data-a="timer:reset" title="Reset">↺</button>

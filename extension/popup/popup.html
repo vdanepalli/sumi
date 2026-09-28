@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <link rel="stylesheet" href="/lib/ui.css">
   <style>
-    body { width: 340px; padding: 14px; }
+    body { width: 400px; padding: 14px; }
     .sp { flex: 1; }
     .clockrow { display: flex; align-items: center; gap: 8px; }
     .clockrow .v { font: 300 32px/1 var(--ui); font-variant-numeric: tabular-nums; }
@@ -17,6 +17,8 @@
   </style>
 </head>
 <body>
+  <div id="palette"></div>
+  <hr>
   <div class="clockrow"><div><div class="m" id="tm">Focus</div><div class="v" id="tv">25:00</div></div><span class="sp"></span>
     <button class="primary" id="t-toggle">Start</button><button id="t-skip" title="Skip">⏭</button></div>
   <div class="clockrow" style="margin-top:10px"><div><div class="m">Stopwatch</div><div class="v" id="sv">0:00</div></div><span class="sp"></span>
