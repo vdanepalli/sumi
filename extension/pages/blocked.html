@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Focus</title>
+  <link rel="icon" href="/icons/icon32.png">
+  <link rel="stylesheet" href="/lib/ui.css">
+  <style>
+    body { min-height: 100vh; display: grid; place-content: center; text-align: center; gap: 14px; }
+    .ens { width: 84px; height: 84px; margin: 0 auto; opacity: .9; }
+    h1 { font-weight: 300; font-size: 34px; margin: 0; }
+    .left { font: 200 64px/1 var(--ui); font-variant-numeric: tabular-nums; }
+  </style>
+</head>
+<body>
+  <img class="ens" src="/icons/icon128.png" alt="">
+  <h1>Stay with it.</h1>
+  <div class="muted" id="site"></div>
+  <div class="left" id="left"></div>
+  <div class="row" style="justify-content:center">
+    <button id="back">Go back</button>
+    <button id="end" class="ghost">End focus session &amp; open</button>
+  </div>
+  <script type="module" src="blocked.js"></script>
+</body>
+</html>

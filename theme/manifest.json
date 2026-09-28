@@ -1,0 +1,134 @@
+{
+  "manifest_version": 3,
+  "name": "True Black",
+  "version": "1.0",
+  "description": "Pure black Chrome frame, tabs and toolbar with soft grey text.",
+  "theme": {
+    "colors": {
+      "frame": [
+        0,
+        0,
+        0
+      ],
+      "frame_inactive": [
+        0,
+        0,
+        0
+      ],
+      "frame_incognito": [
+        0,
+        0,
+        0
+      ],
+      "frame_incognito_inactive": [
+        0,
+        0,
+        0
+      ],
+      "background_tab": [
+        0,
+        0,
+        0
+      ],
+      "background_tab_inactive": [
+        0,
+        0,
+        0
+      ],
+      "background_tab_text": [
+        140,
+        140,
+        140
+      ],
+      "tab_background_text": [
+        140,
+        140,
+        140
+      ],
+      "tab_background_text_inactive": [
+        110,
+        110,
+        110
+      ],
+      "toolbar": [
+        14,
+        14,
+        14
+      ],
+      "tab_text": [
+        230,
+        230,
+        230
+      ],
+      "bookmark_text": [
+        200,
+        200,
+        200
+      ],
+      "toolbar_button_icon": [
+        200,
+        200,
+        200
+      ],
+      "toolbar_field": [
+        24,
+        24,
+        24
+      ],
+      "toolbar_field_text": [
+        230,
+        230,
+        230
+      ],
+      "omnibox_background": [
+        24,
+        24,
+        24
+      ],
+      "omnibox_text": [
+        230,
+        230,
+        230
+      ],
+      "ntp_background": [
+        0,
+        0,
+        0
+      ],
+      "ntp_text": [
+        200,
+        200,
+        200
+      ],
+      "ntp_link": [
+        140,
+        170,
+        230
+      ],
+      "ntp_header": [
+        0,
+        0,
+        0
+      ],
+      "button_background": [
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    "tints": {
+      "buttons": [
+        -1,
+        -1,
+        0.85
+      ]
+    },
+    "properties": {
+      "ntp_background_alignment": "center"
+    }
+  },
+  "icons": {
+    "128": "icon128.png"
+  }
+}

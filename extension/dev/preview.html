@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>New Tab</title>
+  <link rel="icon" href="/icons/icon32.png">
+  <link rel="stylesheet" href="/lib/ui.css">
+  <link rel="stylesheet" href="/dashboard/dashboard.css">
+</head>
+<body>
+  <header class="top">
+    <div class="clock">
+      <div class="time" id="time">--:--</div>
+      <div class="date muted" id="date"></div>
+    </div>
+    <div class="greet">
+      <div id="greeting" class="g"></div>
+      <div class="row small muted" id="streak"></div>
+    </div>
+    <nav class="row">
+      <button class="ghost" id="open-settings" title="Settings">⚙︎ Settings</button>
+    </nav>
+  </header>
+
+  <main class="grid">
+    <!-- focus timer -->
+    <section class="card focus" id="focus">
+      <h2>Focus <span class="sp"></span><span id="cycle" class="small faint"></span></h2>
+      <div class="ring-wrap">
+        <svg viewBox="0 0 120 120" class="ring"><circle class="bg" cx="60" cy="60" r="52"/><circle class="fg" id="ring" cx="60" cy="60" r="52"/></svg>
+        <div class="ring-center">
+          <div class="mode" id="mode">Focus</div>
+          <div class="left" id="left">25:00</div>
+        </div>
+      </div>
+      <div class="row center">
+        <button class="primary" id="t-toggle">Start</button>
+        <button id="t-reset">Reset</button>
+        <button id="t-skip">Skip</button>
+      </div>
+      <div class="row center modes">
+        <button class="ghost" data-mode="focus">Focus</button>
+        <button class="ghost" data-mode="short">Short</button>
+        <button class="ghost" data-mode="long">Long</button>
+      </div>
+      <div class="goal">
+        <div class="row small"><span>Today</span><span class="sp"></span><span id="goal-text" class="muted"></span></div>
+        <div class="bar"><i id="goal-bar"></i></div>
+        <div class="week" id="focus-week"></div>
+      </div>
+    </section>
+
+    <!-- usage -->
+    <section class="card usage">
+      <h2>Time online <span class="sp"></span>
+        <button class="ghost small seg" data-range="1" aria-pressed="true">Today</button>
+        <button class="ghost small seg" data-range="7">7 days</button>
+      </h2>
+      <div class="usage-total"><span id="usage-total">0m</span> <span class="muted small" id="usage-sub"></span></div>
+      <ul class="list usage-list" id="usage-list"></ul>
+      <div class="spark" id="usage-week"></div>
+    </section>
+
+    <!-- tabs -->
+    <section class="card tabs">
+      <h2>Tabs <span class="sp"></span><span class="small faint" id="tab-stats"></span></h2>
+      <input type="search" id="tab-q" placeholder="Search all tabs…  ( / )" autocomplete="off">
+      <ul class="list tab-results" id="tab-results"></ul>
+      <div class="actions">
+        <button data-act="dupes">Close duplicates <b id="n-dupes"></b></button>
+        <button data-act="group">Group by site</button>
+        <button data-act="ungroup">Ungroup</button>
+        <button data-act="sort">Sort by site</button>
+        <button data-act="sleep">Sleep inactive</button>
+        <button data-act="stale">Close stale <b id="n-stale"></b></button>
+        <button data-act="merge">Merge windows</button>
+        <button data-act="save">Save window…</button>
+      </div>
+      <div class="top-domains" id="top-domains"></div>
+      <h3 class="sub">Saved sessions</h3>
+      <ul class="list sessions" id="sessions"></ul>
+    </section>
+
+    <!-- vocabulary -->
+    <section class="card vocab">
+      <h2>Vocabulary <span class="sp"></span><button class="primary small" id="review-btn">Review</button></h2>
+      <form id="lookup-form" class="row nowrap"><input type="search" id="lookup-q" placeholder="Look up a word or idiom…" autocomplete="off"><button>Look up</button></form>
+      <div id="lookup-out"></div>
+      <div class="vstats" id="vstats"></div>
+      <div id="wotd"></div>
+      <div class="row">
+        <input type="search" id="vocab-q" placeholder="Filter your words…" autocomplete="off">
+        <select id="vocab-filter">
+          <option value="all">All</option><option value="due">Due</option><option value="learning">Learning</option>
+          <option value="mastered">Mastered</option><option value="word">Words</option><option value="phrase">Idioms &amp; phrases</option>
+        </select>
+      </div>
+      <ul class="list words" id="words"></ul>
+    </section>
+  </main>
+
+  <!-- review -->
+  <dialog id="review" class="modal">
+    <div class="rv">
+      <div class="row small muted"><span id="rv-count"></span><span class="sp"></span><button class="ghost" id="rv-close">✕</button></div>
+      <div class="rv-term" id="rv-term"></div>
+      <div class="rv-phon muted" id="rv-phon"></div>
+      <div class="rv-back" id="rv-back" hidden></div>
+      <div class="row center" id="rv-show-row"><button class="primary" id="rv-show">Show meaning <kbd>space</kbd></button></div>
+      <div class="row center grades" id="rv-grades" hidden>
+        <button data-g="0">Again <kbd>1</kbd></button>
+        <button data-g="1">Hard <kbd>2</kbd></button>
+        <button data-g="2" class="primary">Good <kbd>3</kbd></button>
+        <button data-g="3">Easy <kbd>4</kbd></button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- word detail -->
+  <dialog id="word" class="modal"><div id="word-body"></div></dialog>
+
+  <!-- settings -->
+  <dialog id="settings" class="modal wide">
+    <div class="row"><h3>Settings</h3><span class="sp"></span><button class="ghost" id="s-close">✕</button></div>
+    <form id="s-form" class="sgrid">
+      <fieldset><legend>Focus timer</legend>
+        <label>Focus <input type="number" name="focusMin" min="1" max="180"> min</label>
+        <label>Short break <input type="number" name="shortMin" min="1" max="60"> min</label>
+        <label>Long break <input type="number" name="longMin" min="1" max="90"> min</label>
+        <label>Long break every <input type="number" name="longEvery" min="2" max="10"> sessions</label>
+        <label>Daily focus goal <input type="number" name="dailyGoalMin" min="10" max="720"> min</label>
+        <label class="ck"><input type="checkbox" name="autoStartBreak"> Start breaks automatically</label>
+        <label class="ck"><input type="checkbox" name="autoStartFocus"> Start focus after a break automatically</label>
+      </fieldset>
+      <fieldset><legend>Blocking during focus</legend>
+        <label class="ck"><input type="checkbox" name="blockDuringFocus"> Block these sites while a focus session runs</label>
+        <textarea name="blocked" rows="5" placeholder="one site per line, e.g. youtube.com"></textarea>
+      </fieldset>
+      <fieldset><legend>Time tracking</legend>
+        <label class="ck"><input type="checkbox" name="trackUsage"> Track time per site (stays on this device / your Drive)</label>
+        <label>Count as idle after <input type="number" name="idleSec" min="15" max="600"> s</label>
+        <label>Never track (one per line)</label>
+        <textarea name="excluded" rows="3" placeholder="e.g. mybank.com"></textarea>
+      </fieldset>
+      <fieldset><legend>Look</legend>
+        <label class="ck"><input type="checkbox" name="clock24"> 24-hour clock</label>
+        <label class="ck"><input type="checkbox" name="showSeconds"> Show seconds</label>
+        <label>Accent <input type="color" name="accent"></label>
+        <label>Tabs are stale after <input type="number" name="staleDays" min="1" max="60"> days</label>
+      </fieldset>
+      <fieldset class="span2"><legend>Your data</legend>
+        <p class="small muted">Settings sync with your Chrome sign-in. Vocabulary, sessions and stats can sync to a private folder in <b>your own Google Drive</b> that only Sumi can read. Nothing is sent to anyone else.</p>
+        <div class="row">
+          <button type="button" id="sync-btn">Sign in with Google &amp; sync</button>
+          <button type="button" id="signout-btn" class="ghost">Stop syncing</button>
+          <span class="small muted" id="sync-status"></span>
+        </div>
+        <div class="row">
+          <button type="button" id="export-btn">Export backup</button>
+          <button type="button" id="import-btn">Import backup</button>
+          <button type="button" id="reset-settings" class="danger">Reset settings</button>
+          <button type="button" id="clear-usage" class="danger">Clear usage history</button>
+        </div>
+      </fieldset>
+    </form>
+  </dialog>
+
+  <div class="toast" id="toast"></div>
+  <script src="/dev/mock-chrome.js"></script><script type="module" src="/dashboard/dashboard.js"></script>
+</body>
+</html>

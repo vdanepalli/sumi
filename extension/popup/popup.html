@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="/lib/ui.css">
+  <style>
+    body { width: 360px; padding: 14px; }
+    .timer { display: flex; align-items: center; gap: 12px; }
+    .timer .left { font: 300 38px/1 var(--ui); font-variant-numeric: tabular-nums; }
+    .timer .mode { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+    .sp { flex: 1; }
+    section { margin-top: 12px; }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .grid2 button { font-size: 12.5px; }
+    #out .def { max-height: 220px; overflow: auto; background: var(--card-2); border: 1px solid var(--line); border-radius: 10px; padding: 10px; margin-top: 8px; }
+    #out .term { font-weight: 600; font-size: 16px; }
+    #out ol { margin: 4px 0; padding-left: 18px; }
+    #out .pos { font-style: italic; color: var(--muted); }
+    #out .ex, #out .syn { color: var(--muted); font-size: 12px; }
+    .site { display: flex; gap: 8px; align-items: center; }
+    hr { border: 0; border-top: 1px solid var(--line); margin: 12px 0; }
+  </style>
+</head>
+<body>
+  <div class="timer">
+    <div><div class="mode" id="mode">Focus</div><div class="left" id="left">25:00</div></div>
+    <span class="sp"></span>
+    <button class="primary" id="toggle">Start</button>
+    <button id="skip" title="Skip">⏭</button>
+  </div>
+  <div class="small muted" id="today"></div>
+  <hr>
+  <form id="f" class="row" style="flex-wrap:nowrap"><input type="search" id="q" placeholder="Look up a word…" autofocus><button>Go</button></form>
+  <div id="out"></div>
+  <hr>
+  <div class="site small muted" id="site"></div>
+  <section class="grid2">
+    <button data-act="dupes">Close duplicates</button>
+    <button data-act="group">Group by site</button>
+    <button data-act="sleep">Sleep inactive</button>
+    <button data-act="save">Save window</button>
+  </section>
+  <section class="row"><span class="small faint" id="tabs"></span><span class="sp"></span><button class="ghost" id="dash">Open dashboard ↗</button></section>
+  <div class="toast" id="toast"></div>
+  <script type="module" src="popup.js"></script>
+</body>
+</html>
