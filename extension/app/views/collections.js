@@ -345,7 +345,8 @@ async function saveAll() {
     <h3>Save all windows</h3>
     <p class="muted">${tabs.length} tabs in ${wins} window${wins === 1 ? '' : 's'} become a new space, one collection per window. Reopen it later with ⧉ next to the space.</p>
     <input type="text" name="n" value="${esc(`Work · ${new Date().toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}`)}">
-    <label class="ck"><input type="checkbox" name="c"> Close the windows after saving</label>
+    <label class="ck"><input type="checkbox" name="c"> Close all windows after saving</label>
+    <p class="small faint">On a Mac, Chrome stays in the Dock with no windows - press ⌘Q to quit it completely.</p>
     <div class="row end"><button type="button" value="cancel" class="ghost">Cancel</button><button type="submit" value="ok" class="primary">Save</button></div></form></dialog>`);
   document.body.appendChild(d);
   d.addEventListener('close', async () => {

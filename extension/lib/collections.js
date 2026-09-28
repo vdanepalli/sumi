@@ -175,18 +175,31 @@ export async function saveAllWindows(name, { close = false, keepTabId = null } =
     await addCards((await addCollection(space.id, `Window ${i + 1} · ${list.length} tabs`, false)).id, list);
   }
   if (close) {
-    const ids = tabs.filter(t => !t.pinned && t.id !== keepTabId).map(t => t.id);
-    if (keepTabId === null) await chrome.windows.create({});
-    if (ids.length) await chrome.tabs.remove(ids);
+    // close every window, including the one Sumi is in (after the caller has shown its message)
+    const allWins = await chrome.windows.getAll();
+    setTimeout(() => { for (const w of allWins) chrome.windows.remove(w.id).catch(() => {}); }, 1200);
   }
   return { space, windows: wins.length, tabs: tabs.length };
 }
-// reopen a space: each collection in its own window
+// reopen a space: each collection in its own window. The first one reuses the
+// current window when it only holds new-tab pages (so no extra empty window is left).
 export async function openSpaceAsWindows(spaceId) {
-  let n = 0;
+  const lists = [];
   for (const c of await collections(spaceId)) {
     const list = (await cards(c.id)).filter(k => safeUrl(k.url));
-    if (list.length) { await chrome.windows.create({ url: list.map(k => k.url), focused: true }); n += 1; }
+    if (list.length) lists.push(list);
   }
-  return n;
+  if (!lists.length) return 0;
+  const cur = await chrome.windows.getCurrent({ populate: true }).catch(() => null);
+  const blank = t => /^(chrome|edge|about):\/\/(newtab|new-tab-page)|^chrome-extension:\/\/[^/]+\/app\/app\.html/.test(t.url || t.pendingUrl || '') || t.url === 'about:blank';
+  const reusable = cur && cur.tabs.every(blank);
+  for (const [i, list] of lists.entries()) {
+    if (i === 0 && reusable) {
+      for (const [j, k] of list.entries()) await chrome.tabs.create({ windowId: cur.id, url: k.url, active: j === 0 });
+      await chrome.tabs.remove(cur.tabs.map(t => t.id)).catch(() => {});
+    } else {
+      await chrome.windows.create({ url: list.map(k => k.url), focused: i === 0 });
+    }
+  }
+  return lists.length;
 }
