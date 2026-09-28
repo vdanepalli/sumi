@@ -32,13 +32,20 @@ export const favicon = url => {
 export const send = msg => new Promise(res => chrome.runtime.sendMessage(msg, r => res(r || { ok: false, error: chrome.runtime.lastError?.message })));
 export function applyAccent(color) { if (color) document.documentElement.style.setProperty('--accent', color); }
 
+// Cancel buttons are type="button" so Enter submits the OK button; close their dialog here
+document.addEventListener('click', e => {
+  const b = e.target.closest && e.target.closest('button[value="cancel"]');
+  const d = b && b.closest('dialog');
+  if (d) d.close('cancel');
+});
+
 // promise-based dialogs styled like the app
 export function ask({ title, text = '', value, ok = 'OK', danger = false, cancel = 'Cancel' }) {
   return new Promise(resolve => {
     const d = h(`<dialog class="modal small"><form method="dialog">
       <h3>${esc(title)}</h3>${text ? `<p class="muted">${esc(text)}</p>` : ''}
       ${value !== undefined ? `<input type="text" name="v" value="${esc(value)}" autocomplete="off">` : ''}
-      <div class="row end"><button value="cancel" type="submit" class="ghost">${esc(cancel)}</button><button value="ok" type="submit" class="${danger ? 'danger-solid' : 'primary'}">${esc(ok)}</button></div>
+      <div class="row end"><button type="button" value="cancel" class="ghost">${esc(cancel)}</button><button type="submit" value="ok" class="${danger ? 'danger-solid' : 'primary'}">${esc(ok)}</button></div>
     </form></dialog>`);
     document.body.appendChild(d);
     d.addEventListener('close', () => {

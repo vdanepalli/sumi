@@ -123,7 +123,7 @@ const toLocalInput = ts => { if (!ts) return ''; const d = new Date(ts); d.setMi
 function pickDate() {
   return new Promise(resolve => {
     const d = h(`<dialog class="modal small"><form method="dialog"><h3>Deadline</h3><input type="datetime-local" name="d" value="${toLocalInput(L.presetDue('tomorrow'))}">
-      <div class="row end"><button value="cancel" class="ghost">Cancel</button><button value="ok" class="primary">Set</button></div></form></dialog>`);
+      <div class="row end"><button type="button" value="cancel" class="ghost">Cancel</button><button value="ok" class="primary">Set</button></div></form></dialog>`);
     document.body.appendChild(d);
     d.addEventListener('close', () => { const v = d.returnValue === 'ok' ? new Date(d.querySelector('input').value).getTime() || null : null; d.remove(); resolve(v); });
     d.showModal();
@@ -148,7 +148,7 @@ function edit(it) {
     </div>
     <label>Tags (comma separated)<input type="text" name="tags" value="${esc(it.tags.join(', '))}"></label>
     <label>Notes<textarea name="note" rows="3">${esc(it.note || '')}</textarea></label>
-    <div class="row end"><button value="cancel" class="ghost">Cancel</button><button value="ok" class="primary">Save</button></div>
+    <div class="row end"><button type="button" value="cancel" class="ghost">Cancel</button><button value="ok" class="primary">Save</button></div>
   </form></dialog>`);
   document.body.appendChild(d);
   d.addEventListener('close', async () => {

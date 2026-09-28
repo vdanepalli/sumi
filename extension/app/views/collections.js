@@ -275,7 +275,7 @@ async function editCard(k) {
     <label class="small muted">Title</label><input type="text" name="t" value="${esc(k.title)}">
     <label class="small muted">URL</label><input type="text" name="u" value="${esc(k.url)}">
     <label class="small muted">Note</label><textarea name="n" rows="3">${esc(k.note || '')}</textarea>
-    <div class="row end"><button value="cancel" class="ghost">Cancel</button><button value="ok" class="primary">Save</button></div></form></dialog>`);
+    <div class="row end"><button type="button" value="cancel" class="ghost">Cancel</button><button value="ok" class="primary">Save</button></div></form></dialog>`);
   document.body.appendChild(d);
   d.addEventListener('close', async () => {
     if (d.returnValue === 'ok') await C.patchCard(k.id, { title: d.querySelector('[name=t]').value.trim() || k.url, url: d.querySelector('[name=u]').value.trim(), note: d.querySelector('[name=n]').value.trim() });
