@@ -1,6 +1,6 @@
 // Spaces → Collections → Cards (saved tabs), Toby-style.
 // Stored as three record collections so edits from different devices merge per item.
-import { all, one, put, putMany, remove, uid, getSettings } from './store.js';
+import { all, one, put, putMany, remove, uid, getSettings, safeUrl } from './store.js';
 
 const byOrder = (a, b) => (a.order ?? 0) - (b.order ?? 0) || (a.created ?? 0) - (b.created ?? 0);
 const nextOrder = list => (list.length ? Math.max(...list.map(x => x.order ?? 0)) + 1 : 0);
@@ -58,7 +58,7 @@ export async function addCards(collectionId, tabs, index) {
   await putMany('cards', list.map((c, i) => ({ ...c, order: i })));
   return fresh;
 }
-export async function patchCard(id, patch) { const c = await one('cards', id); if (c) return put('cards', { ...c, ...patch }); return null; }
+export async function patchCard(id, patch) { if (patch.url && !safeUrl(patch.url)) delete patch.url; const c = await one('cards', id); if (c) return put('cards', { ...c, ...patch }); return null; }
 export const deleteCards = ids => remove('cards', ids);
 // move a card to a collection at a position (same or different collection)
 export async function moveCard(cardId, toCollection, index) {
@@ -86,12 +86,13 @@ export async function saveTabs(spaceId, name, tabs, { close } = {}) {
   return col;
 }
 export async function openCards(list, { newWindow = false, focus = true } = {}) {
-  const urls = list.map(c => c.url);
+  const urls = list.map(c => c.url).filter(safeUrl);
   if (!urls.length) return;
   if (newWindow) return chrome.windows.create({ url: urls, focused: focus });
   for (let i = 0; i < urls.length; i += 1) await chrome.tabs.create({ url: urls[i], active: focus && i === 0 });
 }
 export async function openCard(card, where) {
+  if (!safeUrl(card.url)) return null;
   const cfg = await getSettings();
   if ((where || cfg.openCardIn) === 'current') {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });

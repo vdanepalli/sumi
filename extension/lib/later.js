@@ -1,5 +1,5 @@
 // "Later": things to read / watch / study, with deadlines and reminders.
-import { all, one, put, remove, uid, domainOf } from './store.js';
+import { all, one, put, remove, uid, domainOf, safeUrl } from './store.js';
 
 export const KINDS = { read: 'Read', watch: 'Watch', paper: 'Paper', listen: 'Listen' };
 export const STATUS = { todo: 'Not started', doing: 'In progress', done: 'Done' };
@@ -48,6 +48,7 @@ export async function items() { return all('later'); }
 export async function find(url) { return (await items()).find(i => i.url === url && i.status !== 'done') || null; }
 
 export async function add({ url, title, kind, due = null, remindBefore = null, remindAt = null, priority = 'normal', minutes = null, tags = [], note = '' }) {
+  if (!safeUrl(url)) throw new Error('Only web links (http / https) can be saved');
   const existing = await find(url);
   if (existing) return existing;
   const meta = await enrich(url);
@@ -62,6 +63,7 @@ export async function add({ url, title, kind, due = null, remindBefore = null, r
 export async function patch(id, p) {
   const it = await one('later', id);
   if (!it) return null;
+  if (p.url && !safeUrl(p.url)) delete p.url;
   const next = { ...it, ...p };
   if ('due' in p || 'remindBefore' in p) next.remindAt = p.remindAt ?? reminderTime(next.due, next.remindBefore);
   if ('due' in p || 'remindBefore' in p || 'remindAt' in p) next.reminded = false; // new time: remind again

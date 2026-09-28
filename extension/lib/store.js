@@ -93,4 +93,6 @@ export function domainOf(url) {
     return u.hostname.replace(/^www\./, '');
   } catch (e) { return null; }
 }
+// only open / store ordinary web links (no javascript:, data:, chrome: ...)
+export const safeUrl = u => { try { return /^(https?|file|ftp):$/.test(new URL(u).protocol); } catch (e) { return false; } };
 export const matchesDomain = (domain, list) => !!domain && list.some(d => domain === d || domain.endsWith('.' + d));

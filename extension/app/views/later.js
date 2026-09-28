@@ -36,7 +36,8 @@ export async function mount(el) {
     const pick = $('#due').value;
     if (pick === 'custom') due = await pickDate();
     else if (pick) due = L.presetDue(pick);
-    const it = await L.add({ url, kind: $('#kind').value || undefined, due, remindBefore: due ? 60 : null });
+    let it;
+    try { it = await L.add({ url, kind: $('#kind').value || undefined, due, remindBefore: due ? 60 : null }); } catch (err) { return toast(err.message); }
     toast(`Saved: ${it.title}`);
     $('#url').value = ''; $('#due').value = '';
   };
