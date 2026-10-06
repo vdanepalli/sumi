@@ -4,10 +4,15 @@
 <p>Dev test: the video's length and position are faked (3:00:00, at 1:26:10, 1.5×).</p>
 <script src="/dev/mock-chrome.js"></script>
 <script>
-  // fake a long video without a media file
+  // fake a long video without a media file: fakeVideo.play() / pause() / seek(t) / set({...})
   const v = document.getElementById('v'); let t = 5170, d = 10800, rate = 1.5, paused = false;
-  Object.defineProperties(v, { duration: { get: () => d }, currentTime: { get: () => t, set: x => { t = x; } }, playbackRate: { get: () => rate }, paused: { get: () => paused } });
-  window.fakeVideo = { set: (o) => { if ('t' in o) t = o.t; if ('d' in o) d = o.d; if ('rate' in o) rate = o.rate; v.dispatchEvent(new Event('durationchange')); v.dispatchEvent(new Event('timeupdate')); } };
-  setInterval(() => { t += 1; v.dispatchEvent(new Event('timeupdate')); }, 1000);
+  Object.defineProperties(v, { duration: { get: () => d }, currentTime: { get: () => t, set: x => { t = x; } }, playbackRate: { get: () => rate }, paused: { get: () => paused }, ended: { get: () => false } });
+  const fire = n => v.dispatchEvent(new Event(n));
+  window.fakeVideo = {
+    set: (o) => { if ('t' in o) t = o.t; if ('d' in o) d = o.d; if ('rate' in o) rate = o.rate; fire('durationchange'); fire('timeupdate'); },
+    play: () => { paused = false; fire('play'); }, pause: () => { paused = true; fire('pause'); },
+    seek: x => { t = x; fire('seeked'); fire('timeupdate'); }
+  };
+  setInterval(() => { if (!paused) { t += rate / 4; fire('timeupdate'); } }, 250);
 </script>
 <script src="/content/video.js"></script></body></html>

@@ -77,6 +77,10 @@ and auto-group rules (`github.com/acme = Acme`).
   when the video will end. Appears by itself above a length you choose (default
   30 min), or on demand from the popup, the video's right-click menu or a shortcut.
   Follows the player into full screen; drag to move, click the % to shrink.
+- **Video watch tracking** (opt in per video with ◉ Track, or for every long video in
+  Settings): real time spent, how much you have actually seen (and which parts),
+  pauses and paused time, rewinds, skips, average speed, sittings and a day-by-day
+  log, on the **Videos** page. A tracked video keeps being tracked when you return.
 
 ### Focus projects
 Pick what a session is for ("Focus on" a task or Later item, or ▶ Focus on any of

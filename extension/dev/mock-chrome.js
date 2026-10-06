@@ -24,7 +24,15 @@
     L('l4', 'Designing Data-Intensive Applications - talk', 'https://www.youtube.com/watch?v=PdtlXdse7pw', 'watch', 100, 'todo', { author: 'GOTO Conferences', thumb: 'https://i.ytimg.com/vi/PdtlXdse7pw/hqdefault.jpg' }),
     L('l5', 'Lex Fridman Podcast #400', 'https://open.spotify.com/episode/x', 'listen', null, 'todo')
   ].map(x => [x.id, x]));
-  const local = { later, usage, focusLog, spaces, collections, cards, tasks, account: { email: 'you@gmail.com', name: 'You' }, deviceId: 'dev1', lastSpace: 's1',
+  const vEv = [['pause', 1820, 3, 240], ['rewind', 2400, 2, 0, 2310], ['pause', 3605, 2, 95], ['skip', 4100, 1, 0, 4460], ['rewind', 5000, 0.5, 0, 4880]].map(([k, t, hAgo, dur, to]) => k === 'pause' ? { k, t, at: now - hAgo * 3600000, dur } : { k, from: t, to, at: now - hAgo * 3600000 });
+  const videos = {
+    'yt:PdtlXdse7pw': rec({ id: 'yt:PdtlXdse7pw', yt: 'PdtlXdse7pw', url: 'https://www.youtube.com/watch?v=PdtlXdse7pw', site: 'youtube.com', title: 'Designing Data-Intensive Applications - full lecture', duration: 10800, tracking: true, created: now - 3 * day, lastAt: now - 1800000,
+      watchedSec: 4150, playedSec: 5600, pausedSec: 1310, pauses: 7, rewinds: 4, rewindSec: 410, skips: 1, skipSec: 360, sittings: 3, position: 5170, covered: 4880,
+      segs: [[0, 2400], [2310, 4100], [4460, 5170]], days: { [dk(0)]: 1900, [dk(1)]: 1450, [dk(2)]: 800 }, events: vEv, completedAt: null }),
+    'yt:aircAruvnKk': rec({ id: 'yt:aircAruvnKk', yt: 'aircAruvnKk', url: 'https://www.youtube.com/watch?v=aircAruvnKk', site: 'youtube.com', title: 'But what is a neural network?', duration: 1100, tracking: true, created: now - 5 * day, lastAt: now - 4 * day,
+      watchedSec: 1210, playedSec: 1150, pausedSec: 120, pauses: 2, rewinds: 1, rewindSec: 50, skips: 0, skipSec: 0, sittings: 1, position: 1100, covered: 1100, segs: [[0, 1100]], days: { [dk(4)]: 1210 }, events: [], completedAt: now - 4 * day })
+  };
+  const local = { videos, later, usage, focusLog, spaces, collections, cards, tasks, account: { email: 'you@gmail.com', name: 'You' }, deviceId: 'dev1', lastSpace: 's1',
     timer: { mode: 'focus', running: true, remaining: 0, total: 25*60000, endsAt: now + 14*60000 + 37000, cycle: 2 },
     stopwatch: { running: true, startedAt: now - 47*60000, elapsed: 0, laps: [12*60000, 31*60000], label: 'API design' }, stopwatchLog: { [dk(0)]: [{ ms: 52*60000, label: 'Reading', at: now - 3*3600000 }] } };
   const tabs = ['GitHub - acme/api|https://github.com/acme/api','PR #418 · acme/api|https://github.com/acme/api/pull/418','How to paginate - Stack Overflow|https://stackoverflow.com/q/1','YouTube|https://www.youtube.com/','YouTube|https://www.youtube.com/','Gmail|https://mail.google.com/','Hacker News|https://news.ycombinator.com/','Claude|https://claude.ai/new']

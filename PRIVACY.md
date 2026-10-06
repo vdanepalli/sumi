@@ -14,6 +14,7 @@ servers, has no database, and never receives any of your data.
 | Read / watch later items (URL, title, deadline, notes) | Later list and reminders |
 | Time per website: domain name + seconds per day | Insights |
 | Focus sessions and stopwatch logs | Focus history |
+| Videos you chose to track (address, title, watch time, pauses, rewinds, parts seen) | Videos page |
 | Settings | Your preferences |
 
 It is stored in your browser (`chrome.storage.local`) and, once you sign in with
@@ -40,7 +41,11 @@ displays Sumi's own timer state; it does not read, collect or send page content.
 ## The video progress overlay
 
 On pages with a video, Sumi reads only that video's length, position and speed to
-show how much you have watched. Nothing about the video or page is stored or sent.
+show how much you have watched. Nothing is stored unless you choose **Track this
+video**: then Sumi keeps, for that video only, its address and title, time spent
+watching, pauses, rewinds, skips and which parts you have seen. This is stored and
+synced like the rest of your Sumi data (your browser and your own Google Drive), and
+you can stop tracking or delete it on the Videos page.
 
 ## Permissions
 

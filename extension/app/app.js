@@ -6,6 +6,7 @@ import { account, signIn, continueLocally, configured, syncNow } from '../lib/sy
 const VIEWS = {
   collections: () => import('./views/collections.js'),
   later: () => import('./views/later.js'),
+  videos: () => import('./views/videos.js'),
   sessions: () => import('./views/sessions.js'),
   focus: () => import('./views/focus.js'),
   insights: () => import('./views/insights.js'),

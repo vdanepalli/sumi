@@ -100,7 +100,10 @@ async function guard(tab) {
 // sync ~20s after the last change to saved data, plus every 15 minutes
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area !== 'local') return;
-  if ([...RECORDS, 'settings'].some(k => k in changes)) chrome.alarms.create('sync-soon', { when: Date.now() + 20000 });
+  const keys = [...RECORDS, 'settings'].filter(k => k in changes);
+  // video stats are saved every few seconds while playing: don't keep pushing the sync back for them
+  if (keys.length === 1 && keys[0] === 'videos') chrome.alarms.get('sync-soon').then(x => { if (!x) chrome.alarms.create('sync-soon', { when: Date.now() + 120000 }); });
+  else if (keys.length) chrome.alarms.create('sync-soon', { when: Date.now() + 20000 });
   if (changes.later) scheduleReminders();
 });
 

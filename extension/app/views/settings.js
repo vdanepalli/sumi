@@ -38,6 +38,7 @@ export async function mount(el) {
       <fieldset><legend>Video progress</legend>
         <label class="ck"><input type="checkbox" name="videoProgress"> Show % watched, time left and end time on long videos</label>
         <label>Automatically for videos longer than <input type="number" name="videoAutoMin" min="1" max="600"> min</label>
+        <label class="ck"><input type="checkbox" name="videoAutoTrack"> Also track watch stats for every video that long (otherwise click ◉ Track on the ones you want)</label>
         <p class="small faint">On any other video, open it from the Sumi popup, right-click the video, or set a shortcut at chrome://extensions/shortcuts. Click the % to shrink it, drag to move, ✕ hides it for that video.</p>
       </fieldset>
 

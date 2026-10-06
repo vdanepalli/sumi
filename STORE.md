@@ -14,7 +14,7 @@ TAB COLLECTIONS — organise tabs into spaces and collections. Drag open tabs in
 
 FOCUS — Pomodoro timer and stopwatch that float on every page while running (drag the widget anywhere). Daily goals, streaks, and optional blocking of distracting sites.
 
-VIDEO PROGRESS — a small floating overlay on long videos (YouTube and others): % watched, time left at your playback speed, and when it will end. Works in full screen.
+VIDEO PROGRESS — a small floating overlay on long videos (YouTube and others): % watched, time left at your playback speed, and when it will end. Works in full screen. Opt in to track a video and see real time spent, % actually seen, pauses, rewinds, skips and sittings.
 
 INSIGHTS — time per website with your full history: today, weeks, months, all time, a yearly heatmap and CSV export.
 

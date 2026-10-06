@@ -14,6 +14,7 @@ export const DEFAULT_SETTINGS = {
   showWidget: true, widgetExcluded: [],
   // video progress overlay: appears by itself on videos at least this long
   videoProgress: true, videoAutoMin: 30,
+  videoAutoTrack: false,        // track watch stats for every video that long (else opt in per video)
   // tracking
   trackUsage: true, idleSec: 60, excluded: [],
   // collections
