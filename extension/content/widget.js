@@ -100,12 +100,14 @@
     const r = host.getBoundingClientRect();
     drag = { x: e.clientX, y: e.clientY, right: window.innerWidth - r.right, bottom: window.innerHeight - r.bottom };
     moved = false;
-    box.setPointerCapture(e.pointerId);
   });
   box.addEventListener('pointermove', e => {
     if (!drag) return;
+    if (!e.buttons) { drag = null; return; }   // button released outside before a drag began
     const dx = e.clientX - drag.x; const dy = e.clientY - drag.y;
-    if (Math.abs(dx) + Math.abs(dy) > 3) { moved = true; box.classList.add('drag'); }
+    // capture only once dragging starts, so a plain click keeps its real target
+    if (!moved && Math.abs(dx) + Math.abs(dy) > 3) { moved = true; box.classList.add('drag'); box.setPointerCapture(e.pointerId); }
+    if (!moved) return;
     pos = { right: drag.right - dx, bottom: drag.bottom - dy };
     place();
   });

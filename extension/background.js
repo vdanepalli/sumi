@@ -128,6 +128,7 @@ chrome.commands.onCommand.addListener(async cmd => {
     const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
     if (tab && /^https?:/.test(tab.url)) { const it = await L.add({ url: tab.url, title: tab.title }); note(`Saved to ${L.KINDS[it.kind]} later`, it.title); }
   }
+  if (cmd === 'video-progress') await toggleVideo();
   if (cmd === 'save-window') {
     const { spaces, saveTabs } = await import('./lib/collections.js');
     const [space] = await spaces();
@@ -136,6 +137,13 @@ chrome.commands.onCommand.addListener(async cmd => {
     chrome.notifications.create('saved-' + Date.now(), { type: 'basic', iconUrl: '/icons/icon128.png', title: 'Window saved', message: `${tabs.length} tabs saved to ${space.name}` });
   }
 });
+
+// video progress overlay on the active tab (content/video.js)
+async function toggleVideo(tabId) {
+  if (!tabId) [{ id: tabId } = {}] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+  if (!tabId) return { ok: false, error: 'No tab' };
+  return chrome.tabs.sendMessage(tabId, { type: 'video-progress' }).catch(() => ({ ok: false, error: 'Reload this page once so Sumi can see its video' }));
+}
 
 // ---------------- messages ----------------
 const ACTIONS = {
@@ -148,6 +156,7 @@ chrome.runtime.onMessage.addListener((msg, sender, reply) => {
     if (msg.type === 'flush') { await flush(); return true; }
     if (msg.type === 'sync') return syncNow(true);
     if (msg.type === 'snapshot') return SM.snapshot('manual');
+    if (msg.type === 'video-toggle') return toggleVideo(msg.tabId);
     if (msg.type === 'open-app') return chrome.tabs.create({ url: chrome.runtime.getURL('app/app.html' + (msg.hash || '')) });
     return null;
   })().then(r => reply({ ok: true, data: r }), e => reply({ ok: false, error: e.message }));
@@ -165,9 +174,11 @@ function makeMenus() {
       chrome.contextMenus.create({ id: `due-${k}`, parentId: 'later', title: `Save · due ${label.toLowerCase()} (reminder 1h before)`, contexts: ctx });
     }
     chrome.contextMenus.create({ id: 'save-tab', title: 'Save tab to a Sumi collection (new)', contexts: ['page'] });
+    chrome.contextMenus.create({ id: 'video-progress', title: 'Sumi: show / hide video progress', contexts: ['video'] });
   });
 }
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+  if (info.menuItemId === 'video-progress') return toggleVideo(tab?.id);
   const url = info.linkUrl || info.srcUrl || info.pageUrl;
   const title = info.linkUrl ? (info.selectionText || info.linkUrl) : tab?.title;
   if (!/^https?:/.test(url || '')) return;

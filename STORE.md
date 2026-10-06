@@ -14,6 +14,8 @@ TAB COLLECTIONS — organise tabs into spaces and collections. Drag open tabs in
 
 FOCUS — Pomodoro timer and stopwatch that float on every page while running (drag the widget anywhere). Daily goals, streaks, and optional blocking of distracting sites.
 
+VIDEO PROGRESS — a small floating overlay on long videos (YouTube and others): % watched, time left at your playback speed, and when it will end. Works in full screen.
+
 INSIGHTS — time per website with your full history: today, weeks, months, all time, a yearly heatmap and CSV export.
 
 READ & WATCH LATER — queue articles, papers and videos with read-by / watch-by deadlines and reminders.
@@ -34,7 +36,7 @@ PRIVATE — sign in with Google and your data is stored in a hidden folder in yo
 - contextMenus: "Save to Sumi Later" on pages and links.
 - bookmarks: import the user's bookmarks into collections when they ask to.
 - identity: Google sign-in to sync with the user's own Drive (drive.appdata).
-- scripting + host permission <all_urls>: inject the floating timer widget into pages (display only; no page data is read).
+- scripting + host permission <all_urls>: inject the floating timer widget and the video progress overlay into pages (display only; the overlay reads just the video's length and position, nothing is stored or sent).
 
 **Data disclosures:** handles "Web history" (domains + time) and "Website content" is NOT read. Data is stored locally and in the user's own Google Drive, never transferred to the developer, not sold, not used for unrelated purposes.
 

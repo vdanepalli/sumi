@@ -72,6 +72,11 @@ and auto-group rules (`github.com/acme = Acme`).
   pause/resume, reset, skip; stopwatch lap, reset, stop & save — drag it anywhere (the position is shared by every tab
   and window), click the dot to minimise, double-click to open Sumi. Can be hidden
   per site.
+- **Video progress overlay**: on long videos (YouTube or any site with a normal
+  video player) a small pill shows % watched, time left at your playback speed and
+  when the video will end. Appears by itself above a length you choose (default
+  30 min), or on demand from the popup, the video's right-click menu or a shortcut.
+  Follows the player into full screen; drag to move, click the % to shrink.
 
 ### Focus projects
 Pick what a session is for ("Focus on" a task or Later item, or ▶ Focus on any of

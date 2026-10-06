@@ -80,6 +80,12 @@ $('#tools').onclick = async e => {
     const r = await C.saveAllWindows(`Saved ${new Date().toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}`);
     toast(r ? `Saved ${r.tabs} tabs from ${r.windows} windows as a new space` : 'No web pages open');
   }
+  if (b.dataset.t === 'video') {
+    const r = (await send({ type: 'video-toggle', tabId: tab?.id })).data;
+    if (!r?.ok) return toast(r?.error || 'No video on this page');
+    toast(r.shown ? 'Video progress shown' : 'Video progress hidden');
+    setTimeout(() => window.close(), 700);
+  }
   if (b.dataset.t === 'sleep') toast(`${await Tabs.sleepInactive()} tabs asleep`);
 };
 

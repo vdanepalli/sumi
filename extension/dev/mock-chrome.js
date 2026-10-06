@@ -33,7 +33,7 @@
   const ev = { addListener() {}, removeListener() {} };
   window.chrome = {
     storage: { local: store(local), sync: store({}), session: store({}), onChanged: ev },
-    runtime: { sendMessage: (m, cb) => cb({ ok: true, data: m.type === 'timer' ? local.timer : m.type === 'stopwatch' ? local.stopwatch : true }), getManifest: () => ({ oauth2: { client_id: 'x.apps.googleusercontent.com' } }), getURL: p => p, lastError: null },
+    runtime: { onMessage: { addListener: f => (window.__sumiMsg = window.__sumiMsg || []).push(f) }, sendMessage: (m, cb) => cb({ ok: true, data: m.type === 'timer' ? local.timer : m.type === 'stopwatch' ? local.stopwatch : true }), getManifest: () => ({ oauth2: { client_id: 'x.apps.googleusercontent.com' } }), getURL: p => p, lastError: null },
     tabs: { query: async () => tabs, getCurrent: async () => null, update: async () => {}, remove: async () => {}, create: async () => {}, onCreated: ev, onRemoved: ev, onUpdated: ev, onMoved: ev, onAttached: ev },
     windows: { update: async () => {}, getCurrent: async () => ({ id: 1 }), create: async () => {} },
     identity: {}, alarms: {}, action: {}

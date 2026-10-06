@@ -12,6 +12,8 @@ export const DEFAULT_SETTINGS = {
   sound: true,
   // floating widget
   showWidget: true, widgetExcluded: [],
+  // video progress overlay: appears by itself on videos at least this long
+  videoProgress: true, videoAutoMin: 30,
   // tracking
   trackUsage: true, idleSec: 60, excluded: [],
   // collections

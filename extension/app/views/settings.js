@@ -35,6 +35,12 @@ export async function mount(el) {
         <button type="button" class="ghost small" id="reset-pos">Reset widget position</button>
       </fieldset>
 
+      <fieldset><legend>Video progress</legend>
+        <label class="ck"><input type="checkbox" name="videoProgress"> Show % watched, time left and end time on long videos</label>
+        <label>Automatically for videos longer than <input type="number" name="videoAutoMin" min="1" max="600"> min</label>
+        <p class="small faint">On any other video, open it from the Sumi popup, right-click the video, or set a shortcut at chrome://extensions/shortcuts. Click the % to shrink it, drag to move, ✕ hides it for that video.</p>
+      </fieldset>
+
       <fieldset><legend>Blocking during focus</legend>
         <label class="ck"><input type="checkbox" name="blockDuringFocus"> Block these sites while a focus session runs</label>
         <textarea name="blocked" rows="5"></textarea>
@@ -110,7 +116,7 @@ export async function mount(el) {
     if (el2.name === 'accent') applyAccent(next.accent);
     toast('Saved');
   });
-  $('#reset-pos').onclick = async () => { await set('widgetPos', null); toast('Widget moved back to the corner'); };
+  $('#reset-pos').onclick = async () => { await set('widgetPos', null); await set('videoPos', null); toast('Widgets moved back to the corners'); };
   $('#sync')?.addEventListener('click', async () => {
     $('#last').textContent = 'Syncing…';
     const r = await send({ type: 'sync' });

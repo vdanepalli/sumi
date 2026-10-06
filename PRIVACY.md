@@ -37,6 +37,11 @@ tracking pixels, or data sales.
 To show the timer on every page, Sumi adds a small widget to web pages. It only
 displays Sumi's own timer state; it does not read, collect or send page content.
 
+## The video progress overlay
+
+On pages with a video, Sumi reads only that video's length, position and speed to
+show how much you have watched. Nothing about the video or page is stored or sent.
+
 ## Permissions
 
 - `tabs`, `tabGroups` — list, search, group, sort, save and restore tabs; time the active tab; show the focus page for blocked sites.
