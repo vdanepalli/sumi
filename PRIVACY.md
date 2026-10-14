@@ -26,6 +26,10 @@ Drive**. Sumi asks only for the `drive.appdata` permission: it can read and
 write that one private folder and cannot see any other Drive files. Your Google
 email and name are shown in Sumi so you know which account is in use.
 
+To delete everything, use **Settings → Data → Delete all my data**. It clears this
+computer and, if you choose, your Google Drive copy; your other computers clear
+themselves the next time they sync.
+
 ## What leaves your computer
 
 - **Google Drive** (your own account) — the sync file described above.

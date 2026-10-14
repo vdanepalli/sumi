@@ -201,8 +201,9 @@ async function doSync(interactive) {
   const found = await (await api(`${DRIVE}/files?spaces=appDataFolder&q=${q}&fields=files(id)`, {}, tok)).json();
   const fileId = found.files?.[0]?.id;
   const remote = fileId ? await (await api(`${DRIVE}/files/${fileId}?alt=media`, {}, tok)).json() : {};
+  if ((remote.resetAt || 0) > (await get('resetAt', 0))) await wipeLocal(remote.resetAt); // "delete everything" on another computer
   const local = await snapshot();
-  const merged = { version: 2, savedAt: Date.now(), settings: newer(local.settings, remote.settings) };
+  const merged = { version: 2, savedAt: Date.now(), resetAt: Math.max(remote.resetAt || 0, await get('resetAt', 0)) || undefined, settings: newer(local.settings, remote.settings) };
   for (const k of RECORDS) merged[k] = mergeRecords(local[k], remote[k]);
   const dev = await deviceId();
   for (const k of Object.keys(DEVICE_MAPS)) merged[k] = mergeDevices(local[k], remote[k], dev);
@@ -215,19 +216,50 @@ async function doSync(interactive) {
     await set('remote_' + k, others);
   }
 
-  const body = JSON.stringify(merged);
-  if (fileId) {
-    await api(`${UPLOAD}/${fileId}?uploadType=media`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body }, tok);
-  } else {
-    const b = 'sumi' + Date.now();
-    const meta = JSON.stringify({ name: FILE, parents: ['appDataFolder'] });
-    await api(`${UPLOAD}?uploadType=multipart`, {
-      method: 'POST', headers: { 'Content-Type': `multipart/related; boundary=${b}` },
-      body: `--${b}\r\nContent-Type: application/json\r\n\r\n${meta}\r\n--${b}\r\nContent-Type: application/json\r\n\r\n${body}\r\n--${b}--`
-    }, tok);
-  }
+  await upload(tok, fileId, JSON.stringify(merged));
   await set('lastSync', Date.now());
   return merged;
+}
+
+// write the sync file: replace it, or create it in the app-data folder
+async function upload(tok, fileId, body) {
+  if (fileId) return api(`${UPLOAD}/${fileId}?uploadType=media`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body }, tok);
+  const b = 'sumi' + Date.now();
+  const meta = JSON.stringify({ name: FILE, parents: ['appDataFolder'] });
+  return api(`${UPLOAD}?uploadType=multipart`, {
+    method: 'POST', headers: { 'Content-Type': `multipart/related; boundary=${b}` },
+    body: `--${b}\r\nContent-Type: application/json\r\n\r\n${meta}\r\n--${b}\r\nContent-Type: application/json\r\n\r\n${body}\r\n--${b}--`
+  }, tok);
+}
+
+// ---------------- delete everything (factory reset) ----------------
+// Everything Sumi keeps on this computer goes; you stay signed in. With `everywhere`, the
+// Drive file is replaced by an empty one carrying the reset time, and every other computer
+// wipes itself when it next syncs (instead of merging its old copy back in).
+const KEEP = ['account', 'authMethod', 'deviceId'];
+async function wipeLocal(resetAt) {
+  const keep = await chrome.storage.local.get(KEEP);
+  await chrome.storage.local.clear();
+  await chrome.storage.local.set({ ...keep, resetAt });
+  await chrome.storage.session.clear().catch(() => {});
+  for (const a of await chrome.alarms.getAll()) if (/^(later:|snooze:|timer-end|badge|intent-end|sync-soon)/.test(a.name)) await chrome.alarms.clear(a.name);
+  chrome.action.setBadgeText({ text: '' }).catch(() => {});
+}
+export async function factoryReset({ everywhere = true } = {}) {
+  const resetAt = Date.now();
+  const job = async () => {
+    const acc = await account();
+    if (everywhere && acc && !acc.local && configured()) {
+      const tok = { tok: await token(true) };
+      const q = encodeURIComponent(`name='${FILE}' and trashed=false`);
+      const files = (await (await api(`${DRIVE}/files?spaces=appDataFolder&q=${q}&fields=files(id)`, {}, tok)).json()).files || [];
+      const body = JSON.stringify({ version: 2, savedAt: resetAt, resetAt });
+      if (!files.length) await upload(tok, null, body);
+      for (const f of files) await upload(tok, f.id, body);
+    }
+    await wipeLocal(resetAt);
+  };
+  return navigator.locks ? navigator.locks.request('sumi-sync', job) : job(); // never alongside a sync
 }
 
 // merged per-device maps (this device + others) for Insights

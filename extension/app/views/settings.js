@@ -1,7 +1,7 @@
 // Settings: account & sync, focus, floating widget, tracking, collections, data.
-import { $, esc, toast, confirmBox, downloadJson, pickFile, send, applyAccent } from '../../lib/ui.js';
+import { $, esc, h, toast, confirmBox, downloadJson, pickFile, send, applyAccent } from '../../lib/ui.js';
 import { getSettings, setSettings, resetSettings, get, set } from '../../lib/store.js';
-import { account, signOut, exportAll, importAll, configured } from '../../lib/sync.js';
+import { account, signOut, exportAll, importAll, configured, factoryReset } from '../../lib/sync.js';
 
 export async function mount(el) {
   const cfg = await getSettings();
@@ -111,6 +111,7 @@ export async function mount(el) {
           <button type="button" id="import">Import backup</button>
           <span class="sp"></span>
           <button type="button" class="danger" id="reset">Reset settings</button>
+          <button type="button" class="danger" id="wipe">Delete all my data…</button>
         </div>
         <p class="small faint">Shortcuts: <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd> popup · <kbd>P</kbd> timer · <kbd>W</kbd> stopwatch. Change them at chrome://extensions/shortcuts.</p>
       </fieldset>
@@ -160,6 +161,31 @@ export async function mount(el) {
     const t = await pickFile('.json,application/json');
     if (!t) return;
     try { await importAll(JSON.parse(t)); toast('Backup imported'); setTimeout(() => location.reload(), 600); } catch (e) { toast(e.message); }
+  };
+  $('#wipe').onclick = () => {
+    const signed = acc && !acc.local;
+    const d = h(`<dialog class="modal small"><form method="dialog" class="wipe">
+      <h3>Delete all my data?</h3>
+      <p class="muted">Spaces, collections, saved tabs, Later, tasks, plans, history, videos, parked and snoozed tabs and settings are deleted. Your open tabs stay open. This cannot be undone.</p>
+      <p><button type="button" id="wipe-export">Export a backup first</button></p>
+      ${signed ? '<label class="ck"><input type="checkbox" name="all" checked> Also delete it from my Google Drive and my other computers</label>' : ''}
+      <label>Type DELETE to confirm<input type="text" name="c" autocomplete="off"></label>
+      <div class="row end"><button type="button" class="ghost" id="wipe-cancel">Cancel</button><button value="ok" class="danger-solid">Delete everything</button></div>
+    </form></dialog>`);
+    document.body.appendChild(d);
+    d.querySelector('#wipe-cancel').onclick = () => d.close('cancel');
+    d.querySelector('#wipe-export').onclick = async () => downloadJson(`sumi-backup-${new Date().toISOString().slice(0, 10)}.json`, await exportAll());
+    d.addEventListener('close', async () => {
+      const f = d.querySelector('form').elements;
+      const ok = d.returnValue === 'ok' && f.c.value.trim() === 'DELETE';
+      const everywhere = !!f.all?.checked;
+      d.remove();
+      if (d.returnValue === 'ok' && !ok) return toast('Nothing deleted: type DELETE to confirm');
+      if (!ok) return;
+      try { await factoryReset({ everywhere }); toast('Everything deleted'); setTimeout(() => location.reload(), 700); } catch (e) { toast(`Not deleted: ${e.message}`); }
+    });
+    d.showModal();
+    d.querySelector('input[name=c]').focus();
   };
   $('#reset').onclick = async () => { if (await confirmBox('Reset all settings?', 'Your collections, tasks and history are kept.', 'Reset')) { await resetSettings(); location.reload(); } };
 }
