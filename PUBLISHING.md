@@ -26,10 +26,14 @@ Google Cloud Console, project **Sumi**:
    ./package.sh
    ```
    and upload the new zip to the draft (Package → Upload new package).
-3. **Branding** (https://console.cloud.google.com/auth/branding): add the app home
+3. **Sign-in for other browsers** (Brave, Edge, Arc, or Chrome without browser sign-in):
+   **Create client** → type **Web application** → Authorized redirect URIs
+   `https://<store item id>.chromiumapp.org/` and `https://<dev extension id>.chromiumapp.org/`
+   → put its client ID in `extension/lib/config.js` (`WEB_CLIENT_ID`).
+4. **Branding** (https://console.cloud.google.com/auth/branding): add the app home
    page (the GitHub repo URL) and privacy policy URL; add an app logo if you like
    (a logo needs Google's brand verification, a few days).
-4. **Audience** (https://console.cloud.google.com/auth/audience) → **Publish app**
+5. **Audience** (https://console.cloud.google.com/auth/audience) → **Publish app**
    (Testing → In production) so anyone can sign in. `drive.appdata` is a
    non-sensitive scope: no security review is needed.
 

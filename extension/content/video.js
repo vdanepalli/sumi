@@ -4,13 +4,18 @@
 // Drag to move, click the % to shrink, ✕ to hide for this video. Follows the
 // player into full screen. Reads only the <video> element's time, nothing else.
 //
-// Opt-in tracking (◉ Track on the pill): for that video Sumi records real time spent
-// watching, paused time, pauses, rewinds, skips, speed, sittings and which parts were
-// seen, into the "videos" records (synced like everything else). Once a video is
-// tracked, it keeps being tracked whenever you come back to it.
+// Tracking (automatic for videos longer than Settings → videoTrackMin, unless turned off
+// or stopped on the Videos page): real time spent watching, paused time, pauses, rewinds,
+// skips, speed, sittings and which parts were seen, into the "videos" records (synced
+// like everything else), so the Videos page can show how long each video took you.
 (() => {
-  if (window.__sumiVideo || window.top !== window) return;
-  window.__sumiVideo = true;
+  // re-injected after an extension update/reload: the old copy is orphaned (its chrome.* calls throw and its
+  // UI freezes), so replace it; a live copy (plain duplicate injection) is kept
+  const rt = chrome.runtime;
+  const alive = () => { try { return !!rt.id; } catch (e) { return false; } };
+  if (window.top !== window || (typeof window.__sumiVideo === 'function' && window.__sumiVideo())) return;
+  window.__sumiVideo = alive;
+  document.querySelectorAll('sumi-video').forEach(e => e.remove());
 
   const host = document.createElement('sumi-video');
   host.style.cssText = 'all: initial; position: fixed; z-index: 2147483647; left: 20px; bottom: 20px; display: none;';
@@ -36,8 +41,6 @@
     .paused .rec { background: #666; }
     button { all: unset; cursor: pointer; color: #777; font-size: 11px; padding: 0 2px; }
     button:hover { color: #fff; }
-    button.tb { border: 1px solid #333; border-radius: 6px; padding: 1px 7px; color: #bdbdbd; }
-    button.tb:hover { border-color: #555; }
     .min { min-width: 0; padding: 6px 9px; gap: 4px; }
     .min .left, .min .sub, .min button, .min .trk { display: none; }
     .min .pct { font-size: 15px; }
@@ -117,6 +120,7 @@
   let pauseStart = 0; let pauseEv = null;
   const PAUSE_CAP = 30 * 60 * 1000;   // a pause longer than this counts as a break, not paused time
   let dirty = false;
+  let seenAt = 0;          // updatedAt of the stored record we last read / wrote
   const SITTING_GAP = 30 * 60 * 1000;
 
   async function loadTracking() {
@@ -126,8 +130,8 @@
     if (!ok(video) || !vid) return render();
     const { videos = {} } = await chrome.storage.local.get('videos');
     const r = videos[vid.id];
-    if (r && !r.deleted && r.tracking) rec = r;
-    else if (!r && cfg.videoAutoTrack && autoLength()) rec = newRecord(vid);
+    if (r && !r.deleted && r.tracking) { rec = r; seenAt = r.updatedAt || 0; }
+    else if (!r && autoTrack()) { rec = newRecord(vid); seenAt = 0; }
     render();
   }
   function newRecord(vid) {
@@ -138,22 +142,6 @@
       sittings: 0, position: 0, segs: [], days: {}, events: [], completedAt: null
     };
   }
-  async function startTracking() {
-    const vid = videoId();
-    if (!ok(video) || !vid) return;
-    const { videos = {} } = await chrome.storage.local.get('videos');
-    const r = videos[vid.id];
-    rec = r && !r.deleted ? { ...r, tracking: true } : newRecord(vid);
-    last = null; pauseMark = 0; pauseStart = 0; pauseEv = null;
-    dirty = true; save(); render();
-  }
-  async function stopTracking() {
-    if (!rec) return;
-    flushPause();
-    rec.tracking = false; dirty = true; await save();
-    rec = null; render();
-  }
-
   // merge [a, b] (video seconds) into the sorted list of watched ranges
   function addSeg(a, b) {
     if (b - a < 0.2) return;
@@ -215,7 +203,7 @@
     }
     if (playing) rec.lastPlayAt = now;
     rec.position = Math.round(t); rec.lastAt = now;
-    if (!rec.completedAt && covered() >= rec.duration * 0.95) { rec.completedAt = now; event({ k: 'done', at: now }); }
+    if (!rec.completedAt && covered() >= rec.duration * 0.95) { flushPause(); rec.completedAt = now; rec.doneSec = Math.round(rec.watchedSec + rec.pausedSec); event({ k: 'done', at: now }); }
     last = { t, wall: now, playing };
     dirty = true;
     if (type === 'pause' || type === 'ended') save();
@@ -229,17 +217,24 @@
     for (const k of ['watchedSec', 'playedSec', 'pausedSec', 'rewindSec', 'skipSec']) out[k] = Math.round(out[k]);
     out.days = Object.fromEntries(Object.entries(out.days).map(([d, s]) => [d, Math.round(s)]));
     const { videos = {} } = await chrome.storage.local.get('videos');
+    // stopped or deleted elsewhere (Videos page, another tab / device) since we read it: don't resurrect it
+    const cur = videos[out.id];
+    if (cur && cur.updatedAt !== seenAt && (cur.deleted || (!cur.tracking && out.tracking))) { if (rec && rec.id === out.id) { rec = null; render(); } return; }
+    seenAt = out.updatedAt;
     await chrome.storage.local.set({ videos: { ...videos, [out.id]: out } });
   }
-  setInterval(() => { if (rec && !video?.paused) track('tick'); save(); }, 5000);
-  addEventListener('pagehide', () => { save(); });
-  document.addEventListener('visibilitychange', () => { if (document.hidden) save(); });
+  const safeSave = () => { if (alive()) save().catch(() => {}); };
+  setInterval(() => { if (!alive()) return host.remove(); if (rec && !video?.paused) track('tick'); safeSave(); }, 5000);
+  addEventListener('pagehide', safeSave);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) safeSave(); });
 
   // ---------------- overlay ----------------
   const autoLength = () => { const min = Number(cfg.videoAutoMin ?? 30); return cfg.videoProgress !== false && min > 0 && video.duration >= min * 60; };
+  const excluded = () => { const h = location.hostname.replace(/^www\./, ''); return (cfg.excluded || []).some(d => h === d || h.endsWith('.' + d)); };
+  const autoTrack = () => cfg.videoTrack !== false && cfg.trackUsage !== false && !excluded() && video.duration >= Number(cfg.videoTrackMin ?? 10) * 60;
   function shouldShow() {
     if (!ok(video) || manual === false) return false;
-    return manual === true || !!rec || autoLength();
+    return manual === true || autoLength();
   }
   function render() {
     const show = shouldShow();
@@ -257,17 +252,15 @@
     const trk = $('.trk');
     if (rec) {
       const seen = Math.min(100, Math.round((100 * covered()) / rec.duration));
-      const txt = `${words(rec.watchedSec)} watched · ${seen}% seen · ${rec.pauses} pause${rec.pauses === 1 ? '' : 's'} · ${rec.rewinds} rewind${rec.rewinds === 1 ? '' : 's'}`;
+      const txt = `${words(rec.watchedSec + rec.pausedSec)} spent · ${seen}% seen`;
       if (trk.dataset.s !== txt) {
         trk.dataset.s = txt;
-        trk.innerHTML = '<span class="rec"></span><span class="st" title="Open in Sumi → Videos"></span><button class="tb" data-a="untrack" title="Stop tracking this video (keeps its stats)">Stop</button>';
+        trk.innerHTML = '<span class="rec"></span><span class="st" title="Open in Sumi → Videos"></span>';
         trk.querySelector('.st').textContent = txt;
       }
       trk.classList.toggle('paused', video.paused);
-    } else if (trk.dataset.s !== '') {
-      trk.dataset.s = '';
-      trk.innerHTML = '<button class="tb" data-a="track" title="Record time watched, pauses, rewinds and what you have seen of this video">◉ Track this video</button>';
-    }
+      trk.style.display = '';
+    } else trk.style.display = 'none';
     box.classList.toggle('min', minimized);
     if (cfg.accent) box.style.setProperty('--a', cfg.accent);
   }
@@ -292,9 +285,6 @@
 
   box.addEventListener('click', e => {
     if (moved) return;
-    const a = e.target.closest('[data-a]');
-    if (a && a.dataset.a === 'track') return startTracking();
-    if (a && a.dataset.a === 'untrack') return stopTracking();
     if (e.target.closest('.st')) { save(); chrome.runtime.sendMessage({ type: 'open-app', hash: '#videos' }).catch(() => {}); return; }
     if (e.target.closest('.x')) { manual = false; render(); return; }
     if (e.target.closest('.pct')) { minimized = !minimized; chrome.storage.local.set({ videoMin: minimized }); render(); }
@@ -344,7 +334,7 @@
     // metadata anywhere on the page, and re-check now and then
     document.addEventListener('loadedmetadata', check, true);
     document.addEventListener('durationchange', check, true);
-    setInterval(check, 3000);
+    setInterval(() => { if (alive() && !document.hidden) check(); }, 3000);   // no polling in background tabs
     check();
   });
   chrome.storage.onChanged.addListener((c, area) => {
@@ -353,6 +343,7 @@
     if (c.videoPos) { pos = c.videoPos.newValue; place(); }
     if (c.videoMin) { minimized = !!c.videoMin.newValue; render(); }
     // stopped or deleted from Sumi's Videos page
-    if (c.videos && rec) { const r = (c.videos.newValue || {})[rec.id]; if (!r || r.deleted || !r.tracking) { rec = null; render(); } }
+    // (ignore our own writes, and other writes before this record was first saved)
+    if (c.videos && rec) { const r = (c.videos.newValue || {})[rec.id]; if (r ? r.updatedAt !== seenAt && (r.deleted || !r.tracking) : seenAt) { rec = null; render(); } }
   });
 })();

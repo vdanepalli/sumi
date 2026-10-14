@@ -14,23 +14,22 @@ let sw = (await send({ type: 'stopwatch', action: 'state' })).data;
 function render() {
   if (timer) {
     const l = leftMs(timer);
-    $('#tv').textContent = clock(l);
-    $('#tm').textContent = modeLabel(timer.mode);
-    $('#t-toggle').textContent = timer.running ? 'Pause' : l < timer.total ? 'Resume' : 'Start';
+    $('#t-toggle').textContent = `${timer.running ? '❚❚' : '▶'} ${clock(l)}`;
+    $('#t-toggle').title = `${modeLabel(timer.mode)}: ${timer.running ? 'pause' : 'start'} (Alt+Shift+P)`;
   }
-  if (sw) { $('#sv').textContent = clock(swElapsed(sw)); $('#s-toggle').textContent = sw.running ? 'Pause' : sw.elapsed ? 'Resume' : 'Start'; }
+  const swOn = !!(sw && (sw.running || sw.elapsed));
+  $('#s-toggle').hidden = $('#s-stop').hidden = !swOn;
+  if (swOn) $('#s-toggle').textContent = `${sw.running ? '❚❚' : '▶'} ${clock(swElapsed(sw))}`;
 }
 render();
 setInterval(render, 250);
 chrome.storage.onChanged.addListener(c => { if (c.timer) timer = c.timer.newValue; if (c.stopwatch) sw = c.stopwatch.newValue; render(); });
 $('#t-toggle').onclick = () => send({ type: 'timer', action: 'toggle' });
-$('#t-skip').onclick = () => send({ type: 'timer', action: 'skip' });
 $('#s-toggle').onclick = () => send({ type: 'stopwatch', action: 'toggle' });
 $('#s-stop').onclick = () => send({ type: 'stopwatch', action: 'reset' });
 
 const log = await get('focusLog', {});
 const t = log[dayKey()] || { count: 0, minutes: 0 };
-$('#today').textContent = `Today: ${t.minutes}/${cfg.dailyGoalMin} min focused · ${t.count} session${t.count === 1 ? '' : 's'}`;
 
 // collection picker: "New collection" or an existing one, grouped by space
 const spaces = await C.spaces();
@@ -58,39 +57,17 @@ $('#save-win').onclick = async () => {
   if (!tabs.length) return toast('No web pages in this window');
   const id = await targetCollection(`${new Date().toLocaleDateString([], { month: 'short', day: 'numeric' })} · ${tabs.length} tabs`);
   await C.addCards(id, tabs);
-  if (cfg.closeAfterSave) { await chrome.tabs.create({}); await chrome.tabs.remove(tabs.filter(x => !x.pinned).map(x => x.id)); }
+  if (cfg.closeAfterSave) await C.closeSaved(tabs);
   toast(`Saved ${tabs.length} tabs`);
 };
 $('#save-later').onclick = async () => {
   if (!/^https?:/.test(tab?.url || '')) return toast('This page cannot be saved');
-  const due = L.presetDue($('#ldue').value);
-  const it = await L.add({ url: tab.url, title: tab.title, kind: $('#lkind').value || undefined, due, remindBefore: due ? 60 : null });
-  toast(`Saved to ${L.KINDS[it.kind]} later${due ? ' · reminder 1h before' : ''}`);
-};
-if (tab && /^https?:/.test(tab.url)) { const k = L.kindOf(tab.url); $('#lkind').options[0].textContent = `Auto (${L.KINDS[k].toLowerCase()})`; }
-$('#tools').onclick = async e => {
-  const b = e.target.closest('[data-t]'); if (!b) return;
-  if (b.dataset.t === 'dupes') {
-    const n = (await Tabs.overview()).dupes;
-    if (!n) return toast('No duplicate tabs');
-    if (b.dataset.armed !== '1') { b.dataset.armed = '1'; b.textContent = `Close ${n}? Click again`; setTimeout(() => { b.dataset.armed = ''; b.textContent = 'Close duplicates'; }, 3000); return; }
-    toast(`Closed ${await Tabs.closeDuplicates()} duplicates`);
-  }
-  if (b.dataset.t === 'all') {
-    const r = await C.saveAllWindows(`Saved ${new Date().toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}`);
-    toast(r ? `Saved ${r.tabs} tabs from ${r.windows} windows as a new space` : 'No web pages open');
-  }
-  if (b.dataset.t === 'video') {
-    const r = (await send({ type: 'video-toggle', tabId: tab?.id })).data;
-    if (!r?.ok) return toast(r?.error || 'No video on this page');
-    toast(r.shown ? 'Video progress shown' : 'Video progress hidden');
-    setTimeout(() => window.close(), 700);
-  }
-  if (b.dataset.t === 'sleep') toast(`${await Tabs.sleepInactive()} tabs asleep`);
+  const it = await L.add({ url: tab.url, title: tab.title, minutes: await L.estimateTab(tab.id) });
+  toast(it.existed ? 'Already in Later' : `Saved to ${L.KINDS[it.kind]} later`);
 };
 
 await send({ type: 'flush' });
 const dom = domainOf(tab?.url || '');
 const usage = (await get('usage', {}))[dayKey()] || {};
-$('#site').textContent = dom ? `${dom}: ${dur(usage[dom] || 0)} today` : '';
-$('#open').onclick = () => chrome.tabs.create({ url: 'chrome://newtab' });
+$('#site').textContent = [dom && `${dom} ${dur(usage[dom] || 0)} today`, `${t.minutes}/${cfg.dailyGoalMin} min focused`].filter(Boolean).join(' · ');
+$('#open').onclick = () => chrome.tabs.create({ url: chrome.runtime.getURL('app/app.html') });

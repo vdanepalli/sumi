@@ -2,8 +2,13 @@
 // scrolled (or where a video was) and offers to resume. Runs only on pages whose
 // URL is in your Later list; stores only a percentage / position in Sumi's storage.
 (async () => {
-  if (window.__sumiProgress || window.top !== window) return;
-  window.__sumiProgress = true;
+  // re-injected after an extension update/reload: the old copy is orphaned (its chrome.* calls throw and its
+  // UI freezes), so replace it; a live copy (plain duplicate injection) is kept
+  const rt = chrome.runtime;
+  const alive = () => { try { return !!rt.id; } catch (e) { return false; } };
+  if (window.top !== window || (typeof window.__sumiProgress === 'function' && window.__sumiProgress())) return;
+  window.__sumiProgress = alive;
+  document.querySelectorAll('sumi-resume').forEach(e => e.remove());
   const norm = u => { try { const x = new URL(u); x.hash = ''; ['utm_source', 'utm_medium', 'utm_campaign', 't'].forEach(p => x.searchParams.delete(p)); return x.href; } catch (e) { return u; } };
   const { later = {}, laterProgress = {} } = await chrome.storage.local.get(['later', 'laterProgress']);
   const here = norm(location.href);
@@ -16,14 +21,16 @@
   const save = () => {
     clearTimeout(timer);
     timer = setTimeout(() => {
+      // SPA navigated away from the saved page: don't record another page's position for it
+      if (!alive() || norm(location.href) !== here) return;
       const v = video();
       const max = document.documentElement.scrollHeight - innerHeight;
       const p = v && v.duration ? { t: v.currentTime, pct: Math.round((100 * v.currentTime) / v.duration) } : { y: scrollY, pct: max > 0 ? Math.min(100, Math.round((100 * scrollY) / max)) : 0 };
-      chrome.storage.local.get('laterProgress').then(r => chrome.storage.local.set({ laterProgress: { ...(r.laterProgress || {}), [item.id]: { ...p, at: Date.now() } } }));
+      chrome.storage.local.get('laterProgress').then(r => chrome.storage.local.set({ laterProgress: { ...(r.laterProgress || {}), [item.id]: { ...p, at: Date.now() } } })).catch(() => {});
     }, 1200);
   };
   addEventListener('scroll', save, { passive: true });
-  setInterval(() => { const v = video(); if (v && !v.paused) save(); }, 10000);
+  setInterval(() => { const v = video(); if (alive() && v && !v.paused) save(); }, 10000);
 
   // offer to resume
   if (saved && ((saved.y || 0) > 400 || (saved.t || 0) > 20)) {

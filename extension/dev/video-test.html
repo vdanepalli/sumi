@@ -2,7 +2,7 @@
 <style>body{font:16px Georgia;background:#f4f1ea;color:#222;max-width:900px;margin:40px auto}video{width:860px;height:480px;background:#111;display:block}</style></head>
 <body><h1>A 3-hour lecture</h1><div id="player"><video id="v"></video></div>
 <p>Dev test: the video's length and position are faked (3:00:00, at 1:26:10, 1.5×).</p>
-<script src="/dev/mock-chrome.js"></script>
+<script src="/dev/mock-chrome.js"></script><script>chrome.runtime.id = 'dev'; // content scripts treat a missing id as "extension reloaded"</script>
 <script>
   // fake a long video without a media file: fakeVideo.play() / pause() / seek(t) / set({...})
   const v = document.getElementById('v'); let t = 5170, d = 10800, rate = 1.5, paused = false;

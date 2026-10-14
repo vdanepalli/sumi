@@ -17,8 +17,9 @@ export async function mount(el) {
     e.preventDefault();
     let text = $('#t').value.trim();
     if (!text) return;
-    const high = /!high\b/.test(text); const today = /!today\b/.test(text);
-    text = text.replace(/!(high|today)\b/g, '').trim();
+    const high = /!high\b/i.test(text); const today = /!today\b/i.test(text);
+    text = text.replace(/!(high|today)\b/gi, '').replace(/\s+/g, ' ').trim();
+    if (!text) return toast('Type the task too, e.g. “Call Sam !today”');
     const items = await all('tasks');
     await put('tasks', { id: uid(), text, done: false, high, today, created: Date.now(), order: items.length ? Math.min(...items.map(i => i.order ?? 0)) - 1 : 0 });
     $('#t').value = '';
@@ -39,20 +40,21 @@ async function render() {
   $('#count').textContent = `${items.filter(t => !t.done).length} open · ${items.filter(t => t.done).length} done`;
   $('#list').innerHTML = shown.map(t => `<li draggable="true" data-id="${t.id}" class="${t.done ? 'done' : ''}">
       <button class="check" data-a="done" aria-label="Complete"></button>
-      <span class="tx" data-a="edit">${esc(t.text)}</span>
+      <span class="tx" data-a="edit">${esc(t.text)}</span>${t.url && /^https?:/.test(t.url) ? `<a class="ghost small" href="${esc(t.url)}" target="_blank" title="${esc(t.urlTitle || t.url)}">↗</a>` : ''}
       ${t.high ? '<span class="chip warn">high</span>' : ''}${t.today ? '<span class="chip">today</span>' : ''}
       <button class="ghost small" data-a="focus" title="Start a focus session on this task">▶ Focus</button><button class="ghost icon" data-a="del" title="Delete">✕</button></li>`).join('') || `<li class="muted small">${filter === 'done' ? 'Nothing completed yet.' : 'All clear.'}</li>`;
   $('#list').onclick = async e => {
     const li = e.target.closest('li[data-id]'); if (!li) return;
     const t = items.find(x => x.id === li.dataset.id);
+    if (!t) return;
     const a = e.target.closest('[data-a]')?.dataset.a;
-    if (a === 'done') await put('tasks', { ...t, done: !t.done, doneAt: Date.now() });
+    if (a === 'done') await put('tasks', { ...t, done: !t.done, doneAt: t.done ? null : Date.now() });
     if (a === 'del') await remove('tasks', t.id);
     if (a === 'focus') { await chrome.runtime.sendMessage({ type: 'timer', action: 'start', project: { type: 'task', id: t.id, title: t.text } }); toast(`Focusing on “${t.text}”`); }
     if (a === 'edit') {
       const span = e.target.closest('.tx');
       span.contentEditable = 'true'; span.focus();
-      const finish = async () => { span.contentEditable = 'false'; const v = span.textContent.trim(); if (v && v !== t.text) await put('tasks', { ...t, text: v }); };
+      const finish = async () => { span.contentEditable = 'false'; const v = span.textContent.replace(/\s+/g, ' ').trim(); if (v && v !== t.text) await put('tasks', { ...t, text: v }); };
       span.onblur = finish;
       span.onkeydown = ev => { if (ev.key === 'Enter') { ev.preventDefault(); span.blur(); } if (ev.key === 'Escape') { span.textContent = t.text; span.blur(); } };
     }

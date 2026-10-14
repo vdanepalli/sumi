@@ -16,13 +16,40 @@ folder in their Google Drive) — there is no Sumi server.
 tabs, favourites, saved tabs, collections, Later and tasks, plus actions (start
 focus, save window, close duplicates, go to …). ↑/↓, Enter, Esc.
 
+### Daily rhythm
+- **Plan the day**: the first new tab of the day suggests what's unfinished from yesterday,
+  parked tasks, Later items due or in progress and open tasks; pick a few and a focus goal.
+  A thin *Today* strip keeps them in sight; tick them off there.
+- **Shut down**: what got done, focus vs goal, a note for tomorrow, and every tab saved and
+  closed into *Parked* (Resume tomorrow). Unfinished items are offered again tomorrow.
+- **Intention screen** (opt in): before a distracting site, "What are you here for?", then
+  5 or 15 minutes. Today's visits and reasons are shown on the screen.
+- **Snooze a tab**: right-click or search → in 3 hours / this evening / tomorrow morning /
+  this weekend / next week. It closes and comes back on this computer.
+- **Quick capture**: `+ call the dentist !today` in the search adds a task (optionally with
+  the current page). **Fill the gap**: `20 min` shows Later items that fit; reading / watching
+  time is estimated when you save a page, and Later can filter by it.
+
+### For developers
+Sumi recognises repos, pull / merge requests, issues, CI runs (GitHub, GitLab incl.
+self-hosted, Bitbucket), Linear / Jira tickets and localhost servers from the address
+alone — it never reads the page.
+- **Search**: `#482` / `pr 482`, `ENG-421`, `owner/repo` jump to the open tab, else open
+  it (in the repo you're working in; ticket links learned from your tabs).
+  **Quicklinks**: `gh acme/api`, `npm react`, `mdn fetch`, `so …` — edit in Settings.
+- **Park this task** (search action): saves the tab group / PR's tabs / window with a
+  note for future you and closes them; **Resume** reopens them as they were, note shown.
+- **Copy as Markdown**: a tab, a group or window, or a collection (tracking params removed).
+  **Paste links** anywhere on the new tab to open them or save them as a collection.
+- **Insights → Developer time**: time by repo, PR, issue, ticket and local server; split
+  into review / tickets / CI / code / docs / Q&A / AI; **Copy standup** (yesterday + today).
+
 ### Favourites
 Star any saved tab or collection (☆). Favourites appear at the top of Collections
 and first in the palette.
 
 ### Sessions (auto-save)
-Every window is snapshotted every 15 min (configurable), when a window closes and
-when Chrome starts; the last 30 are kept. Restore everything, one window, or save
+Every window is snapshotted every 15 min (configurable) and when Chrome starts; the last 30 are kept. Restore everything, one window, or save
 a snapshot as collections — nothing is lost after a crash or an accidental close.
 
 ### Smart tabs
@@ -56,8 +83,13 @@ and auto-group rules (`github.com/acme = Acme`).
 - **Reading progress**: scroll position / video time is remembered on saved pages,
   with a *Resume* prompt; progress bars in the list; **Up next** card.
 - Status (not started → in progress → done), priority, estimated minutes, tags,
-  notes. Grouped as Overdue / Today / This week / Later / No deadline / Done, with
+  notes. Grouped as Overdue / Today / Next 7 days / Later / No deadline / Done, with
   filters, search, and a due-count badge in the sidebar.
+- **Reading list views**: group by deadline, site, type or tag (or newest first); open a whole
+  group at once.
+- **Keep reminding me** (opt in per item, in ✎ Edit): a nudge every 30 min / 1 h / 2 h / 4 h /
+  day until it is done, with *Open now* and *Stop reminding me*. Only inside the hours you set
+  (default 9–21), never during a focus session or while you are away.
 
 ### Frequently visited & bookmarks
 - The Collections page shows your most-used sites (last 30 days) — click to open
@@ -77,10 +109,11 @@ and auto-group rules (`github.com/acme = Acme`).
   when the video will end. Appears by itself above a length you choose (default
   30 min), or on demand from the popup, the video's right-click menu or a shortcut.
   Follows the player into full screen; drag to move, click the % to shrink.
-- **Video watch tracking** (opt in per video with ◉ Track, or for every long video in
-  Settings): real time spent, how much you have actually seen (and which parts),
-  pauses and paused time, rewinds, skips, average speed, sittings and a day-by-day
-  log, on the **Videos** page. A tracked video keeps being tracked when you return.
+- **Video watch tracking** (automatic for videos longer than 10 min; change or turn off in
+  Settings): how long each video took you, pauses included, and your **pace** (video length ÷
+  time spent: above 1× = faster than real time), how much you have actually seen, pauses,
+  rewinds, skips, speed, sittings and a day-by-day log, on the **Videos** page. Stop tracking
+  any video there.
 
 ### Focus projects
 Pick what a session is for ("Focus on" a task or Later item, or ▶ Focus on any of

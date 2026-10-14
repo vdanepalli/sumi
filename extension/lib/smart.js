@@ -10,13 +10,17 @@ export async function snapshot(reason = 'auto') {
   const tabs = (await chrome.tabs.query({})).filter(webTab);
   if (!tabs.length) return null;
   const wins = {};
-  for (const t of tabs) (wins[t.windowId] = wins[t.windowId] || []).push({ url: t.url, title: t.title, pinned: t.pinned, fav: t.favIconUrl || '' });
+  // bounded entries: no data: favicons (can be many KB each), capped titles
+  const fav = u => (/^https?:/.test(u || '') && u.length < 300 ? u : '');
+  for (const t of tabs) (wins[t.windowId] = wins[t.windowId] || []).push({ url: t.url, title: (t.title || '').slice(0, 300), pinned: t.pinned, fav: fav(t.favIconUrl) });
   const snap = { id: uid(), at: Date.now(), reason, windows: Object.values(wins), count: tabs.length };
-  const sig = JSON.stringify(snap.windows.map(w => w.map(t => t.url)));
-  await update('snapshots', [], list => {
-    if (list[0] && list[0].sig === sig) { list[0].at = snap.at; return list; } // unchanged: just refresh the time
-    return [{ ...snap, sig }, ...list].slice(0, SNAP_KEEP);
-  });
+  const sigOf = ws => JSON.stringify(ws.map(w => w.map(t => t.url)));
+  const sig = sigOf(snap.windows);
+  const list = await get('snapshots', []);
+  // unchanged since the last one: don't rewrite the whole list (every storage.local write is
+  // broadcast to every tab's content scripts)
+  if (list[0] && sigOf(list[0].windows || []) === sig && reason !== 'manual') { await set('lastSnapshot', Date.now()); return list[0]; }
+  await update('snapshots', [], l => [snap, ...l.map(({ sig: _s, ...x }) => x)].slice(0, SNAP_KEEP)); // old copies carried a big 'sig'
   await set('lastSnapshot', Date.now());
   return snap;
 }
@@ -36,7 +40,8 @@ export async function autoSleep() {
   const cutoff = Date.now() - cfg.autoSleepMin * 60000;
   let n = 0;
   for (const t of await chrome.tabs.query({})) {
-    if (t.active || t.pinned || t.audible || t.discarded || !webTab(t) || !t.lastAccessed || t.lastAccessed > cutoff) continue;
+    if (t.active || t.pinned || t.audible || t.discarded || t.autoDiscardable === false || t.status !== 'complete' || !webTab(t) || !t.lastAccessed || t.lastAccessed > cutoff) continue;
+    if (/\/(edit|compose|new|draft)s?\b/i.test(t.url)) continue; // may hold unsaved input: Chrome does not ask before an extension discards
     if (matchesDomain(domainOf(t.url), cfg.sleepExcluded)) continue;
     try { await chrome.tabs.discard(t.id); n += 1; } catch (e) { /* not discardable */ }
   }
@@ -69,7 +74,9 @@ export async function applyGroupRules(tab) {
   const rules = parseRules(cfg.groupRules);
   if (!rules.length || !webTab(tab) || tab.pinned) return;
   const url = tab.url.toLowerCase();
-  const rule = rules.find(r => url.includes(r.match));
+  const host = domainOf(tab.url) || '';
+  // a bare domain matches that site and its subdomains ('x.com' must not catch netflix.com); anything else is a url part
+  const rule = rules.find(r => (/^[a-z0-9.-]+\.[a-z]{2,}$/.test(r.match) ? matchesDomain(host, [r.match.replace(/^www\./, '')]) : url.includes(r.match)));
   if (!rule) return;
   const groups = await chrome.tabGroups.query({ windowId: tab.windowId, title: rule.name });
   if (groups[0]) { if (tab.groupId !== groups[0].id) await chrome.tabs.group({ tabIds: [tab.id], groupId: groups[0].id }); }
@@ -78,7 +85,7 @@ export async function applyGroupRules(tab) {
 
 // ---------- site limits ----------
 export function parseLimits(lines) {
-  return (lines || []).map(l => l.trim().split(/\s+/)).filter(([d, m]) => d && Number(m) > 0).map(([d, m]) => ({ domain: d.replace(/^www\./, ''), min: Number(m) }));
+  return (lines || []).map(l => l.trim().split(/\s+/)).filter(([d, m]) => d && Number(m) > 0).map(([d, m]) => ({ domain: d.toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/.*$/, ''), min: Number(m) }));
 }
 export async function limitFor(domain) {
   const cfg = await getSettings();
@@ -86,7 +93,11 @@ export async function limitFor(domain) {
 }
 // seconds used today on every domain covered by the limit
 export async function usedToday(limit) {
-  const day = (await get('usage', {}))[dayKey()] || {};
+  const today = dayKey();
+  const day = { ...((await get('usage', {}))[today] || {}) };
+  // plus seconds not yet written to 'usage' (buffered by the service worker)
+  const { pendingUsage } = await chrome.storage.session.get('pendingUsage').catch(() => ({}));
+  for (const [d, n] of Object.entries(pendingUsage?.[today] || {})) day[d] = (day[d] || 0) + n;
   return Object.entries(day).filter(([d]) => d === limit.domain || d.endsWith('.' + limit.domain)).reduce((a, [, s]) => a + s, 0);
 }
 export async function overLimit(domain) {

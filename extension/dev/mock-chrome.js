@@ -3,7 +3,7 @@
 (function () {
   const now = Date.now(), day = 86400000;
   const dk = n => { const d = new Date(now - n * day); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
-  const sites = ['github.com','stackoverflow.com','youtube.com','docs.python.org','claude.ai','mail.google.com','news.ycombinator.com','notion.so','figma.com','linkedin.com'];
+  const sites = ['github.com','stackoverflow.com','youtube.com','docs.python.org','chatgpt.com','mail.google.com','news.ycombinator.com','notion.so','figma.com','linkedin.com'];
   const usage = {}; for (let i = 0; i < 120; i++) { if (i % 9 === 8) continue; usage[dk(i)] = {}; sites.forEach((s, k) => { usage[dk(i)][s] = Math.round((5 - k / 2.5) * 600 * (0.5 + ((i * 7 + k * 13) % 10) / 10)); }); }
   const focusLog = {}; for (let i = 0; i < 30; i++) if (i % 4 !== 3) focusLog[dk(i)] = { count: 2 + i % 4, minutes: 50 + (i * 17) % 110 };
   const rec = (o) => ({ ...o, updatedAt: now });
@@ -35,7 +35,7 @@
   const local = { videos, later, usage, focusLog, spaces, collections, cards, tasks, account: { email: 'you@gmail.com', name: 'You' }, deviceId: 'dev1', lastSpace: 's1',
     timer: { mode: 'focus', running: true, remaining: 0, total: 25*60000, endsAt: now + 14*60000 + 37000, cycle: 2 },
     stopwatch: { running: true, startedAt: now - 47*60000, elapsed: 0, laps: [12*60000, 31*60000], label: 'API design' }, stopwatchLog: { [dk(0)]: [{ ms: 52*60000, label: 'Reading', at: now - 3*3600000 }] } };
-  const tabs = ['GitHub - acme/api|https://github.com/acme/api','PR #418 · acme/api|https://github.com/acme/api/pull/418','How to paginate - Stack Overflow|https://stackoverflow.com/q/1','YouTube|https://www.youtube.com/','YouTube|https://www.youtube.com/','Gmail|https://mail.google.com/','Hacker News|https://news.ycombinator.com/','Claude|https://claude.ai/new']
+  const tabs = ['GitHub - acme/api|https://github.com/acme/api','PR #418 · acme/api|https://github.com/acme/api/pull/418','How to paginate - Stack Overflow|https://stackoverflow.com/q/1','YouTube|https://www.youtube.com/','YouTube|https://www.youtube.com/','Gmail|https://mail.google.com/','Hacker News|https://news.ycombinator.com/','ChatGPT|https://chatgpt.com/']
     .map((s, i) => { const [title, url] = s.split('|'); return { id: i + 1, windowId: i < 5 ? 1 : 2, title, url, active: i === 0, pinned: false, lastAccessed: now - i * day, discarded: i === 6, groupId: -1, favIconUrl: '' }; });
   const store = obj => ({ get: async k => k == null ? { ...obj } : Array.isArray(k) ? Object.fromEntries(k.filter(x => x in obj).map(x => [x, obj[x]])) : (k in obj ? { [k]: obj[k] } : {}), set: async o => Object.assign(obj, o), remove: async k => { delete obj[k]; } });
   const ev = { addListener() {}, removeListener() {} };

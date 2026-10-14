@@ -26,9 +26,19 @@ export function dur(secs) {
   const hh = Math.floor(m / 60);
   return hh < 100 ? `${hh}h ${m % 60 ? (m % 60) + 'm' : ''}`.trim() : `${hh}h`;
 }
+// site icon for a URL or bare domain. Uses Chrome's own favicon cache when the
+// "favicon" permission is granted (no request leaves the browser), else Google's service.
+const FAV_API = (() => { try { return chrome.runtime.getManifest().permissions?.includes('favicon'); } catch (e) { return false; } })();
 export const favicon = url => {
-  try { return `https://www.google.com/s2/favicons?domain=${new URL(url.includes('://') ? url : 'https://' + url).hostname}&sz=32`; } catch (e) { return ''; }
+  try {
+    const u = new URL(String(url).includes('://') ? url : 'https://' + url);
+    if (!/^https?:$/.test(u.protocol)) return '';
+    if (FAV_API) return chrome.runtime.getURL(`/_favicon/?pageUrl=${encodeURIComponent(u.origin)}&size=32`);
+    return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(u.hostname)}&sz=32`;
+  } catch (e) { return ''; }
 };
+// true when a key press is meant for a text field (so single-key shortcuts must not fire)
+export const isTyping = e => !!(e.isComposing || e.target?.closest?.('input, textarea, select, [contenteditable=""], [contenteditable=true]'));
 export const send = msg => new Promise(res => chrome.runtime.sendMessage(msg, r => res(r || { ok: false, error: chrome.runtime.lastError?.message })));
 export function applyAccent(color) { if (color) document.documentElement.style.setProperty('--accent', color); }
 
@@ -81,13 +91,15 @@ export const confirmBox = (title, text, ok = 'Delete') => ask({ title, text, ok,
 export function downloadJson(name, data) {
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([typeof data === 'string' ? data : JSON.stringify(data, null, 1)], { type: 'application/json' }));
-  a.download = name;
+  a.download = String(name).replace(/[\\/:*?"<>|\u0000-\u001f]+/g, '-').slice(0, 120);
   a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 30000);
 }
 export function pickFile(accept) {
   return new Promise(resolve => {
     const i = Object.assign(document.createElement('input'), { type: 'file', accept });
     i.onchange = async () => resolve(i.files[0] ? await i.files[0].text() : null);
+    i.oncancel = () => resolve(null);
     i.click();
   });
 }

@@ -1,6 +1,6 @@
-// Videos: watch stats for videos you chose to track from the floating video
-// overlay (◉ Track). Real time spent, how much of the video you have actually seen,
-// pauses, rewinds, skips, speed, sittings, and a timeline of what happened.
+// Videos: every long video is tracked (Settings → Video progress). How long each one
+// took you (pace = video length / time spent, pauses included), how much you have
+// actually seen, pauses, rewinds, skips, speed, sittings, and a timeline.
 import { $, esc, dur, favicon, toast, confirmBox } from '../../lib/ui.js';
 import { all, put, remove, daysAgo, safeUrl } from '../../lib/store.js';
 
@@ -18,6 +18,10 @@ const when = t => {
   if (days < 6) return `${d.toLocaleDateString([], { weekday: 'short' })} ${time}`;
   return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
 };
+// time spent so far (pauses count: they are part of how long a video takes you); frozen at completion
+const spentOf = v => v.completedAt && v.doneSec ? v.doneSec : (v.watchedSec || 0) + (v.pausedSec || 0);
+// pace: video seconds covered per second spent. >1× = faster than the video's length
+const paceOf = v => { const s = spentOf(v); const c = v.completedAt ? v.duration : v.covered || 0; return s > 60 && c ? c / s : null; };
 const seenOf = v => Math.min(100, Math.round((100 * (v.covered || 0)) / (v.duration || 1)));
 const resumeUrl = v => (v.yt ? `https://www.youtube.com/watch?v=${encodeURIComponent(v.yt)}${v.position > 5 ? `&t=${Math.round(v.position)}s` : ''}` : safeUrl(v.url) ? v.url : '#');
 
@@ -45,23 +49,26 @@ async function render() {
   const week = new Set(Array.from({ length: 7 }, (_, i) => daysAgo(i)));
   const weekSec = vids.reduce((n, v) => n + Object.entries(v.days || {}).filter(([d]) => week.has(d)).reduce((m, [, s]) => m + s, 0), 0);
   const totalSec = vids.reduce((n, v) => n + (v.watchedSec || 0), 0);
-  const played = vids.reduce((n, v) => n + (v.playedSec || 0), 0);
+  const done = vids.filter(v => v.completedAt && v.duration);
+  const doneLen = done.reduce((n, v) => n + v.duration, 0); const doneSpent = done.reduce((n, v) => n + spentOf(v), 0);
+  const pace = doneSpent ? doneLen / doneSpent : null;
   $('#kpis').innerHTML = `
     <div class="kpi"><span>Watched this week</span><b>${dur(weekSec)}</b><small>${dur(totalSec)} all time</small></div>
     <div class="kpi"><span>Videos tracked</span><b>${vids.length}</b><small>${vids.filter(v => v.tracking && !v.completedAt).length} in progress</small></div>
-    <div class="kpi"><span>Finished</span><b>${vids.filter(v => v.completedAt).length}</b><small>95% or more seen</small></div>
-    <div class="kpi"><span>Average speed</span><b>${totalSec ? (played / totalSec).toFixed(2) + '×' : '–'}</b><small>${played > totalSec ? dur(played - totalSec) + ' saved' : 'video time / real time'}</small></div>`;
+    <div class="kpi"><span>Finished</span><b>${done.length}</b><small>${dur(doneLen)} of video in ${dur(doneSpent)}</small></div>
+    <div class="kpi" title="Video length ÷ time it took you, pauses included. Above 1× = faster than real time"><span>Your pace</span><b>${pace ? pace.toFixed(2) + '×' : '–'}</b><small>${pace ? `an hour of video takes you ${dur(3600 / pace)}` : 'finish a video to see it'}</small></div>`;
 
   const list = vids.filter(v => (state.filter === 'all' || (state.filter === 'done' ? v.completedAt : !v.completedAt))
     && (!state.q || `${v.title} ${v.site}`.toLowerCase().includes(state.q)));
   $('#list').innerHTML = list.map(card).join('') || `<div class="empty"><h3>${vids.length ? 'Nothing here' : 'No tracked videos yet'}</h3>
-    <p class="muted">${vids.length ? 'Try another filter.' : 'Open a video (YouTube or any site), and on the Sumi progress overlay click <b>◉ Track this video</b>.<br>Sumi then records real time watched, pauses, rewinds, skips and what you have seen.'}</p></div>`;
+    <p class="muted">${vids.length ? 'Try another filter.' : 'Watch any video longer than the length set in Settings → Video progress (YouTube or any site).<br>Sumi records how long it takes you, pauses, rewinds, skips and what you have seen.'}</p></div>`;
 }
 
 function card(v) {
   const seen = seenOf(v);
   const thumb = v.yt ? `https://i.ytimg.com/vi/${encodeURIComponent(v.yt)}/mqdefault.jpg` : favicon(v.url);
   const speed = v.watchedSec > 30 ? v.playedSec / v.watchedSec : 1;
+  const pace = paceOf(v);
   const rewatched = Math.max(0, (v.playedSec || 0) - (v.covered || 0));
   const stat = (label, val, sub = '') => `<div><span>${label}</span><b>${val}</b>${sub ? `<small>${sub}</small>` : ''}</div>`;
   return `<section class="card vid" data-id="${esc(v.id)}">
@@ -79,12 +86,13 @@ function card(v) {
       </div>
       <div class="vid-act">
         <button data-a="details" class="ghost small">${open.has(v.id) ? 'Hide details' : 'Details'}</button>
-        <button data-a="track" class="ghost small">${v.tracking ? 'Stop tracking' : 'Track again'}</button>
+        <button data-a="track" class="ghost small" title="${v.tracking ? 'Stop tracking this video (keeps its stats)' : 'Track it again next time you watch'}">${v.tracking ? 'Stop tracking' : 'Track again'}</button>
         <button data-a="del" class="ghost icon" title="Delete this video's stats">✕</button>
       </div>
     </div>
     <div class="vid-stats">
-      ${stat('Time spent', dur(v.watchedSec || 0), `${v.sittings || 0} sitting${v.sittings === 1 ? '' : 's'}`)}
+      ${stat(v.completedAt ? 'Took you' : 'Time spent', dur(spentOf(v)), `${v.sittings || 0} sitting${v.sittings === 1 ? '' : 's'}`)}
+      ${stat('Pace', pace ? pace.toFixed(2) + '×' : '–', pace ? (pace >= 1 ? 'faster than its length' : 'slower than its length') : 'not enough yet')}
       ${stat('Seen', seen + '%', `${dur(v.covered || 0)} of ${dur(v.duration)}`)}
       ${stat('Paused', v.pauses || 0, `${dur(v.pausedSec || 0)} in total`)}
       ${stat('Rewinds', v.rewinds || 0, `${dur(v.rewindSec || 0)} back`)}

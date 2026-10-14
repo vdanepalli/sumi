@@ -1,5 +1,5 @@
-// Sessions: automatic snapshots of every open window (every few minutes, when a
-// window closes, at startup). Restore everything, one window, or save as a collection.
+// Sessions: automatic snapshots of every open window (every few minutes and at
+// startup). Restore everything, one window, or save as a collection.
 import { $, esc, toast, favicon, send } from '../../lib/ui.js';
 import { get, set, getSettings } from '../../lib/store.js';
 import { restoreSnapshot } from '../../lib/smart.js';
@@ -8,7 +8,7 @@ import * as C from '../../lib/collections.js';
 export async function mount(el) {
   const cfg = await getSettings();
   el.innerHTML = `
-    <header class="ins-h"><h2 class="page-h">Sessions</h2><span class="muted small">All windows are saved every ${cfg.snapshotMin} minutes, when a window closes and when Chrome starts. The last 30 are kept on this computer.</span>
+    <header class="ins-h"><h2 class="page-h">Sessions</h2><span class="muted small">All windows are saved every ${cfg.snapshotMin} minutes and when Chrome starts. The last 30 are kept on this computer.</span>
       <span class="sp"></span><button id="now" class="primary">Snapshot now</button></header>
     <div id="snaps"></div>`;
   $('#now').onclick = async () => { await send({ type: 'snapshot' }); toast('Snapshot saved'); render(); };

@@ -2,6 +2,7 @@
 // the middle, open tabs on the right. Drag open tabs into collections, drag cards
 // between collections, drag collection headers to reorder.
 import { $, $$, esc, h, toast, favicon, ask, confirmBox, downloadJson, pickFile } from '../../lib/ui.js';
+import { mdList } from '../../lib/dev.js';
 import { get, set, getSettings, domainOf } from '../../lib/store.js';
 import * as C from '../../lib/collections.js';
 import * as Tabs from '../../lib/tabs.js';
@@ -66,7 +67,7 @@ export async function mount(el) {
   wireDrops();
 
   const onKey = e => {
-    if (e.target.closest?.('input, textarea, dialog')) return;
+    if (e.metaKey || e.ctrlKey || e.altKey || e.target.closest?.('input, textarea, select, [contenteditable], dialog') || $('dialog[open]')) return;
     if (e.key === '/') { e.preventDefault(); $('#q').focus(); }
   };
   document.addEventListener('keydown', onKey);
@@ -85,7 +86,7 @@ export async function mount(el) {
   };
 }
 function closeMenu(e) { const m = $('#more-menu'); if (m && !e.target.closest('.menu-wrap')) m.hidden = true; }
-const schedule = () => { clearTimeout(renderTimer); renderTimer = setTimeout(() => { renderSpaces(); renderBoard(); }, 80); };
+const schedule = () => { clearTimeout(renderTimer); renderTimer = setTimeout(() => { renderSpaces(); renderBoard(); renderFavs(); }, 80); };
 async function render() { await renderSpaces(); await renderBoard(); await renderTabs(); await renderFrequent(); await renderFavs(); }
 
 // starred saved tabs and collections, from every space
@@ -179,9 +180,11 @@ async function renderBoard() {
       <header draggable="true" data-drag-col="${c.id}">
         <button class="ghost icon chev" data-a="collapse" title="Collapse">${c.collapsed ? '▸' : '▾'}</button>
         <h3 data-a="rename" title="Click to rename">${esc(c.name)}</h3><span class="n">${cs.length}</span>
+        ${c.parked?.note ? `<span class="small muted parked-note" title="${esc(c.parked.note)}">${esc(c.parked.note)}</span>` : ''}
         <span class="sp"></span>
-        <button class="ghost small" data-a="open" title="Open all tabs">Open ${cs.length > 1 ? 'all' : ''}</button>
-        <button class="ghost small" data-a="window" title="Open all in a new window">New window</button>
+        ${c.parked ? `<button class="ghost small" data-a="resume" title="Reopen in a new window and remove from Parked">▶ Resume</button>` : `<button class="ghost small" data-a="open" title="Open all tabs">Open ${cs.length > 1 ? 'all' : ''}</button>
+        <button class="ghost small" data-a="window" title="Open all in a new window">New window</button>`}
+        <button class="ghost small" data-a="copy" title="Copy as a Markdown list of links">Copy</button>
         <button class="ghost small" data-a="add-current" title="Add the current tab">＋ Tab</button>
         <button class="ghost icon star ${c.starred ? 'on' : ''}" data-a="star" title="Favourite">${c.starred ? '★' : '☆'}</button>
         <button class="ghost icon" data-a="del" title="Delete collection">✕</button>
@@ -211,6 +214,7 @@ function wireBoard(cols, allCards) {
     if (card) {
       const k = allCards.find(x => x.id === card.dataset.card);
       const a = e.target.closest('[data-ca]')?.dataset.ca;
+      if (!k) return;
       if (a === 'del') { await C.deleteCards(k.id); return; }
       if (a === 'star') { await C.patchCard(k.id, { starred: !k.starred }); return; }
       if (a === 'edit') return editCard(k);
@@ -225,6 +229,8 @@ function wireBoard(cols, allCards) {
     if (a === 'rename') { const n = await ask({ title: 'Rename collection', value: c.name }); if (n) await C.patchCollection(c.id, { name: n }); }
     if (a === 'open') await C.openCards(cs);
     if (a === 'window') await C.openCards(cs, { newWindow: true });
+    if (a === 'resume') await C.resume(c);
+    if (a === 'copy') { await navigator.clipboard.writeText(mdList(cs, c.name)); toast(`Copied ${cs.length} link${cs.length === 1 ? '' : 's'} as Markdown`); }
     if (a === 'add-current') {
       const [t] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
       const [other] = t && !/^chrome/.test(t.url) ? [t] : (await chrome.tabs.query({ lastFocusedWindow: true })).filter(x => !/^chrome/.test(x.url)).slice(-1);
@@ -249,7 +255,7 @@ function wireBoard(cols, allCards) {
       const d = data(e);
       if (!d) return;
       if (d.kind === 'card') await C.moveCard(d.id, grid.dataset.cards, index);
-      if (d.kind === 'tab') { await C.addCards(grid.dataset.cards, [d.tab], index); if (e.altKey && d.tab.id) chrome.tabs.remove(d.tab.id); }
+      if (d.kind === 'tab') { const added = await C.addCards(grid.dataset.cards, [d.tab], index); if (e.altKey && d.tab.id && added.length) chrome.tabs.remove(d.tab.id); }
     });
   });
   // collection reorder: drop a collection header on another collection
@@ -287,7 +293,7 @@ async function editCard(k) {
     <div class="row end"><button type="button" value="cancel" class="ghost">Cancel</button><button value="ok" class="primary">Save</button></div></form></dialog>`);
   document.body.appendChild(d);
   d.addEventListener('close', async () => {
-    if (d.returnValue === 'ok') await C.patchCard(k.id, { title: d.querySelector('[name=t]').value.trim() || k.url, url: d.querySelector('[name=u]').value.trim(), note: d.querySelector('[name=n]').value.trim() });
+    if (d.returnValue === 'ok') await C.patchCard(k.id, { title: d.querySelector('[name=t]').value.trim() || k.url, url: d.querySelector('[name=u]').value.trim() || k.url, note: d.querySelector('[name=n]').value.trim() });
     d.remove();
   });
   d.showModal();

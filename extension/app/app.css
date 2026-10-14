@@ -304,7 +304,7 @@ dialog.pal-dlg { width: min(680px, 94vw); top: 12vh; margin-top: 0; padding: 12p
 .cover i { position: absolute; top: 0; bottom: 0; background: var(--accent); opacity: .85; }
 .cover b { position: absolute; top: -1px; bottom: -1px; width: 2px; margin-left: -1px; background: #fff; }
 .vid-act { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; flex: none; }
-.vid-stats { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin-top: 12px; }
+.vid-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); gap: 8px; margin-top: 12px; }
 .vid-stats > div { background: var(--card-2); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; display: grid; min-width: 0; }
 .vid-stats span { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
 .vid-stats b { font-size: 18px; font-weight: 400; }
@@ -324,4 +324,31 @@ dialog.pal-dlg { width: min(680px, 94vw); top: 12vh; margin-top: 0; padding: 12p
 .vev li b { color: var(--text); font-weight: 500; font-variant-numeric: tabular-nums; }
 .vev li span { flex: 1; }
 .vev time { color: var(--faint); white-space: nowrap; }
-@media (max-width: 1000px) { .vid-stats { grid-template-columns: repeat(3, 1fr); } .vid-more { grid-template-columns: 1fr; } .vid .thumb { width: 120px; } }
+@media (max-width: 1000px) { .vid-more { grid-template-columns: 1fr; } .vid .thumb { width: 120px; } }
+.col .parked-note { max-width: 40%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.paste-list { list-style: none; margin: 8px 0 12px; padding: 0; font-size: 12.5px; color: var(--muted); max-height: 220px; overflow: auto; }
+.paste-list li { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 2px 0; }
+.catlegend.dev { flex-wrap: wrap; gap: 6px 18px; text-transform: none; }
+.devwork { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; margin-top: 14px; }
+.devgrp { border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; min-width: 0; }
+.devg { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+.devg b { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.devi { display: flex; gap: 6px; font-size: 12.5px; padding: 2px 0; min-width: 0; }
+.devi a { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.devi .faint { min-width: 52px; }
+.devi .sp { flex: 1; }
+/* today's plan */
+.today-strip { display: flex; align-items: center; gap: 6px 14px; flex-wrap: wrap; padding: 8px 12px; margin: 0 0 14px; border: 1px solid var(--line); border-radius: 12px; font-size: 13px; }
+.today-strip .k { font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.today-strip .pi { display: inline-flex; align-items: center; gap: 6px; max-width: 30ch; cursor: pointer; }
+.today-strip .pi span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.today-strip .pi.done span { text-decoration: line-through; color: var(--faint); }
+.today-strip .sp { flex: 1; }
+.plan-dlg { width: min(520px, 94vw); }
+.plan-dlg form { display: grid; gap: 10px; }
+.plan-opts { display: grid; gap: 4px; max-height: 300px; overflow: auto; }
+.plan-opts .ck { display: flex; align-items: center; gap: 8px; }
+.plan-opts .ck > span:first-of-type { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.plan-done { list-style: none; margin: 0; padding: 0; font-size: 13px; }
+.plan-done li.done { color: var(--muted); }
+.board > .today-strip { margin: 0 0 12px; }

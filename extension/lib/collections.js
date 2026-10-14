@@ -4,7 +4,7 @@ import { all, one, put, putMany, remove, uid, getSettings, safeUrl } from './sto
 
 const byOrder = (a, b) => (a.order ?? 0) - (b.order ?? 0) || (a.created ?? 0) - (b.created ?? 0);
 const nextOrder = list => (list.length ? Math.max(...list.map(x => x.order ?? 0)) + 1 : 0);
-const isSaveable = url => /^(https?|file|ftp):/.test(url || '');
+const isSaveable = url => safeUrl(String(url || '').trim());
 
 // ---------- spaces ----------
 export async function spaces() {
@@ -50,7 +50,7 @@ export async function cards(collectionId) {
 export async function addCards(collectionId, tabs, index) {
   const existing = await cards(collectionId);
   const fresh = tabs.filter(t => isSaveable(t.url)).map(t => ({
-    id: uid(), collectionId, url: t.url, title: t.title || t.url, note: t.note || '', fav: t.favIconUrl || t.fav || '', created: Date.now()
+    id: uid(), collectionId, url: String(t.url).trim(), title: String(t.title || t.url).slice(0, 500), note: t.note || '', fav: t.favIconUrl || t.fav || '', created: Date.now()
   }));
   if (!fresh.length) return [];
   const list = [...existing];
@@ -74,22 +74,30 @@ export async function saveTabs(spaceId, name, tabs, { close } = {}) {
   const cfg = await getSettings();
   const col = await addCollection(spaceId, name);
   await addCards(col.id, tabs);
-  if (close ?? cfg.closeAfterSave) {
-    const ids = tabs.filter(t => isSaveable(t.url) && t.id && !t.pinned).map(t => t.id);
-    if (ids.length) {
-      // keep the window alive: open a new tab first if we would close every tab
-      const win = await chrome.tabs.query({ windowId: tabs[0].windowId });
-      if (win.length <= ids.length) await chrome.tabs.create({ windowId: tabs[0].windowId });
-      await chrome.tabs.remove(ids);
-    }
-  }
+  if (close ?? cfg.closeAfterSave) await closeSaved(tabs);
   return col;
+}
+// close tabs that were just saved (never pinned ones). A window that would lose every
+// tab gets a blank one first - created inactive, so a popup calling this stays alive.
+export async function closeSaved(tabs) {
+  const ids = new Set(tabs.filter(t => isSaveable(t.url) && t.id && !t.pinned).map(t => t.id));
+  if (!ids.size) return 0;
+  for (const w of new Set(tabs.filter(t => ids.has(t.id)).map(t => t.windowId))) {
+    const left = (await chrome.tabs.query({ windowId: w })).filter(t => !ids.has(t.id));
+    if (!left.length) await chrome.tabs.create({ windowId: w, active: false });
+  }
+  await chrome.tabs.remove([...ids]);
+  return ids.size;
 }
 export async function openCards(list, { newWindow = false, focus = true } = {}) {
   const urls = list.map(c => c.url).filter(safeUrl);
   if (!urls.length) return;
   if (newWindow) return chrome.windows.create({ url: urls, focused: focus });
-  for (let i = 0; i < urls.length; i += 1) await chrome.tabs.create({ url: urls[i], active: focus && i === 0 });
+  // create every tab in the background and activate the first one last: activating a tab
+  // closes the toolbar popup, which used to stop "Open all" after the first tab
+  const made = [];
+  for (const url of urls) made.push(await chrome.tabs.create({ url, active: false }));
+  if (focus && made[0]) await chrome.tabs.update(made[0].id, { active: true });
 }
 export async function openCard(card, where) {
   if (!safeUrl(card.url)) return null;
@@ -202,4 +210,35 @@ export async function openSpaceAsWindows(spaceId) {
     }
   }
   return lists.length;
+}
+
+// ---------- park / resume a task ----------
+// Park: save a task's tabs (and a note for future you) as a collection in the "Parked"
+// space, then close them. Resume: reopen them in their own window (as the tab group they
+// were, if any), show the note, and drop the parked collection.
+export async function parkedSpace() {
+  const list = await spaces();
+  return list.find(s => s.parked) || put('spaces', { id: uid(), name: 'Parked', parked: true, order: nextOrder(list), created: Date.now() });
+}
+export async function park(tabs, name, note = '', group = null) {
+  const col = await addCollection((await parkedSpace()).id, name);
+  await put('collections', { ...col, parked: { note: String(note).trim().slice(0, 500), at: Date.now(), group } });
+  await addCards(col.id, tabs);
+  await closeSaved(tabs); // last: closing the active tab can close the toolbar popup
+  return col;
+}
+export async function resume(col) {
+  const urls = (await cards(col.id)).map(c => c.url).filter(safeUrl);
+  if (!urls.length) return deleteCollection(col.id);
+  // build everything unfocused, focus last: focusing a new window closes the toolbar popup
+  const win = await chrome.windows.create({ url: urls, focused: false });
+  const g = col.parked?.group;
+  if (g && win.tabs?.length) {
+    const gid = await chrome.tabs.group({ tabIds: win.tabs.map(t => t.id), createProperties: { windowId: win.id } });
+    await chrome.tabGroups.update(gid, { title: g.title || col.name, ...(g.color ? { color: g.color } : {}) }).catch(() => {});
+  }
+  await deleteCollection(col.id);
+  if (col.parked?.note) chrome.notifications.create('resumed-' + col.id, { type: 'basic', iconUrl: '/icons/icon128.png', title: `Back to: ${col.name}`, message: col.parked.note });
+  await chrome.windows.update(win.id, { focused: true });
+  return win;
 }

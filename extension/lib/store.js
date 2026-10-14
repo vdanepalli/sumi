@@ -3,6 +3,8 @@
 // collections carry updatedAt and are soft-deleted (tombstones) so two devices can
 // be merged safely.
 
+import { DEFAULT_QUICKLINKS } from './dev.js';
+
 export const DEFAULT_SETTINGS = {
   // focus
   focusMin: 25, shortMin: 5, longMin: 15, longEvery: 4,
@@ -14,7 +16,7 @@ export const DEFAULT_SETTINGS = {
   showWidget: true, widgetExcluded: [],
   // video progress overlay: appears by itself on videos at least this long
   videoProgress: true, videoAutoMin: 30,
-  videoAutoTrack: false,        // track watch stats for every video that long (else opt in per video)
+  videoTrack: true, videoTrackMin: 10,   // track time spent on every video at least this long
   // tracking
   trackUsage: true, idleSec: 60, excluded: [],
   // collections
@@ -30,11 +32,19 @@ export const DEFAULT_SETTINGS = {
   groupRules: [],               // "url-part = Group name" lines
   snapshotMin: 15,              // auto-save all windows every N minutes
   // time awareness
-  productive: ['github.com', 'stackoverflow.com', 'docs.python.org', 'developer.mozilla.org', 'notion.so', 'claude.ai', 'chatgpt.com', 'arxiv.org', 'figma.com', 'linear.app'],
+  productive: ['github.com', 'stackoverflow.com', 'docs.python.org', 'developer.mozilla.org', 'notion.so', 'chatgpt.com', 'arxiv.org', 'figma.com', 'linear.app'],
   distracting: ['youtube.com', 'x.com', 'twitter.com', 'reddit.com', 'instagram.com', 'facebook.com', 'tiktok.com', 'netflix.com'],
   siteLimits: [],               // "domain minutes" lines, e.g. "youtube.com 45"
   limitBlock: true,             // block a site for the rest of the day once its limit is used
-  weeklyReview: true
+  weeklyReview: true,
+  // Later: "keep reminding me" nudges only between these hours (local, 0-24), and optionally stay on screen
+  nagFrom: 9, nagTo: 21, nagSticky: false,
+  // palette quicklinks: "key = url with {q}" (type "gh acme/api", "npm react"…)
+  quicklinks: DEFAULT_QUICKLINKS,
+  // ask "what are you here for?" before opening a distracting site (the "distracting" list)
+  intentGate: false,
+  // plan the day on the first new tab of the day; shut down in the evening
+  dailyPlan: true
 };
 
 export const uid = () => crypto.randomUUID();

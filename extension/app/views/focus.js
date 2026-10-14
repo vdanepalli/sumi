@@ -59,6 +59,7 @@ export async function mount(el) {
   $('#t-reset').onclick = () => act('timer', 'reset');
   $('#t-skip').onclick = () => act('timer', 'skip');
   $$('.modes button').forEach(b => { b.onclick = () => act('timer', 'reset', { mode: b.dataset.mode }); });
+  sw = sw || { running: false, elapsed: 0, laps: [], label: '' }; // service worker did not answer
   $('#sw-label').value = sw.label || '';
   $('#sw-toggle').onclick = () => (sw.running ? act('stopwatch', 'pause') : act('stopwatch', 'start', { label: $('#sw-label').value.trim() }));
   $('#sw-lap').onclick = () => act('stopwatch', 'lap');
@@ -120,14 +121,16 @@ async function history() {
   const devs = await allDevices('focusLog');
   const byDay = {};
   for (const log of Object.values(devs)) for (const [d, v] of Object.entries(log)) { byDay[d] = byDay[d] || { count: 0, minutes: 0 }; byDay[d].count += v.count; byDay[d].minutes += v.minutes; }
+  if (!$('#goal')) return; // view left meanwhile
+  const goal = Math.max(1, Number(cfg.dailyGoalMin) || 120);
   const today = byDay[dayKey()] || { count: 0, minutes: 0 };
-  $('#goal').textContent = `Today ${today.minutes} / ${cfg.dailyGoalMin} min · ${today.count} session${today.count === 1 ? '' : 's'}`;
-  $('#goal-bar').style.width = `${Math.min(100, (100 * today.minutes) / cfg.dailyGoalMin)}%`;
+  $('#goal').textContent = `Today ${today.minutes} / ${goal} min · ${today.count} session${today.count === 1 ? '' : 's'}`;
+  $('#goal-bar').style.width = `${Math.min(100, (100 * today.minutes) / goal)}%`;
   const days = [...Array(30)].map((_, i) => daysAgo(29 - i));
-  const max = Math.max(cfg.dailyGoalMin, ...days.map(d => byDay[d]?.minutes || 0));
+  const max = Math.max(goal, ...days.map(d => byDay[d]?.minutes || 0));
   $('#chart30').innerHTML = days.map(d => {
     const m = byDay[d]?.minutes || 0;
-    return `<div title="${d}: ${m} min"><i class="${m >= cfg.dailyGoalMin ? 'on' : ''}" style="height:${Math.max(2, (90 * m) / max)}px"></i></div>`;
+    return `<div title="${d}: ${m} min"><i class="${m >= goal ? 'on' : ''}" style="height:${Math.max(2, (90 * m) / max)}px"></i></div>`;
   }).join('');
   let streak = 0;
   for (let i = byDay[dayKey()]?.count ? 0 : 1; ; i += 1) { if (byDay[daysAgo(i)]?.count) streak += 1; else break; }
@@ -142,7 +145,7 @@ async function history() {
   for (const log of Object.values(swAll)) for (const [d, list] of Object.entries(log)) if (d >= daysAgo(29)) for (const x of list) if (x.project) { const k = `${x.project.type}:${x.project.id}`; proj[k] = proj[k] || { title: x.project.title, type: x.project.type, minutes: 0 }; proj[k].minutes += Math.round(x.ms / 60000); }
   const prows = Object.values(proj).sort((a, b) => b.minutes - a.minutes);
   const pmax = prows[0]?.minutes || 1;
-  $('#projects').innerHTML = prows.slice(0, 10).map(p => `<li><span class="t">${esc(p.title)} <span class="faint small">${p.type}</span></span><div class="bar" style="width:30%"><i style="width:${(100 * p.minutes) / pmax}%"></i></div><b>${dur(p.minutes * 60)}</b></li>`).join('')
+  $('#projects').innerHTML = prows.slice(0, 10).map(p => `<li><span class="t">${esc(p.title)} <span class="faint small">${esc(p.type)}</span></span><div class="bar" style="width:30%"><i style="width:${(100 * p.minutes) / pmax}%"></i></div><b>${dur(p.minutes * 60)}</b></li>`).join('')
     || '<li class="muted small">Pick something in “Focus on”, or press ▶ Focus on a task or Later item.</li>';
   const swDevs = await allDevices('stopwatchLog');
   const todays = Object.values(swDevs).flatMap(l => l[dayKey()] || []).sort((a, b) => b.at - a.at);

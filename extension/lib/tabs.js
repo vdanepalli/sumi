@@ -2,7 +2,33 @@
 import { domainOf, getSettings } from './store.js';
 import { spaces, saveTabs } from './collections.js';
 
-const normalUrl = u => { try { const x = new URL(u); x.hash = ''; return x.href; } catch (e) { return u; } };
+// same page = same URL ignoring a trailing slash, an empty "#" and Chrome's #:~:text= highlight.
+// Other #fragments are kept: on Gmail and other web apps they are different pages.
+const normalUrl = u => {
+  try {
+    const x = new URL(u);
+    if (!x.hash || x.hash.startsWith('#:~:')) x.hash = '';
+    x.pathname = x.pathname.replace(/\/+$/, '') || '/';
+    return x.href;
+  } catch (e) { return u; }
+};
+// tabs closeDuplicates would close: keeps the active, else pinned, else most recently used copy
+function dupePlan(tabs) {
+  const groups = new Map();
+  for (const t of tabs) {
+    if (isInternal(t)) continue;
+    const k = (t.incognito ? 'i:' : '') + normalUrl(t.url);
+    if (!groups.has(k)) groups.set(k, []);
+    groups.get(k).push(t);
+  }
+  const close = [];
+  for (const g of groups.values()) {
+    if (g.length < 2) continue;
+    g.sort((a, b) => (b.active - a.active) || (b.pinned - a.pinned) || ((b.lastAccessed || 0) - (a.lastAccessed || 0)));
+    for (const t of g.slice(1)) if (!t.active && !t.pinned && !t.audible) close.push(t.id);
+  }
+  return close;
+}
 const isInternal = t => !/^https?:|^file:/.test(t.url || '');
 
 export async function allTabs() { return chrome.tabs.query({}); }
@@ -10,9 +36,7 @@ export async function allTabs() { return chrome.tabs.query({}); }
 export async function overview() {
   const tabs = await allTabs();
   const wins = new Set(tabs.map(t => t.windowId));
-  const seen = new Map();
-  let dupes = 0;
-  for (const t of tabs) { const k = normalUrl(t.url); if (seen.has(k)) dupes += 1; else seen.set(k, t); }
+  const dupes = dupePlan(tabs).length;
   const { staleDays } = await getSettings();
   const cutoff = Date.now() - staleDays * 86400000;
   const stale = tabs.filter(t => !t.active && !t.pinned && !t.audible && t.lastAccessed && t.lastAccessed < cutoff).length;
@@ -39,14 +63,7 @@ export async function focusTab(tab) {
 }
 
 export async function closeDuplicates() {
-  const tabs = await allTabs();
-  const keep = new Map();
-  const close = [];
-  // prefer keeping the active / pinned copy
-  for (const t of [...tabs].sort((a, b) => (b.active - a.active) || (b.pinned - a.pinned))) {
-    const k = normalUrl(t.url);
-    if (keep.has(k)) close.push(t.id); else keep.set(k, t);
-  }
+  const close = dupePlan(await allTabs());
   if (close.length) await chrome.tabs.remove(close);
   return close.length;
 }
@@ -79,7 +96,7 @@ export async function ungroupAll() {
 
 export async function sortByDomain() {
   const tabs = (await chrome.tabs.query({ currentWindow: true })).filter(t => !t.pinned && t.groupId === -1);
-  const sorted = [...tabs].sort((a, b) => (domainOf(a.url) || '~').localeCompare(domainOf(b.url) || '~') || a.title.localeCompare(b.title));
+  const sorted = [...tabs].sort((a, b) => (domainOf(a.url) || '~').localeCompare(domainOf(b.url) || '~') || (a.title || '').localeCompare(b.title || ''));
   const offset = (await chrome.tabs.query({ currentWindow: true, pinned: true })).length;
   for (let i = 0; i < sorted.length; i += 1) await chrome.tabs.move(sorted[i].id, { index: offset + i });
   return sorted.length;
@@ -99,7 +116,7 @@ export async function sleepInactive() {
 export async function staleTabs() {
   const { staleDays } = await getSettings();
   const cutoff = Date.now() - staleDays * 86400000;
-  return (await allTabs()).filter(t => !t.active && !t.pinned && !t.audible && t.lastAccessed && t.lastAccessed < cutoff);
+  return (await allTabs()).filter(t => !isInternal(t) && !t.incognito && !t.active && !t.pinned && !t.audible && t.lastAccessed && t.lastAccessed < cutoff);
 }
 export async function closeStale() {
   const tabs = await staleTabs();
@@ -121,6 +138,7 @@ export async function closeDomain(domain) {
 export async function mergeWindows() {
   const cur = await chrome.windows.getCurrent();
   const tabs = (await allTabs()).filter(t => t.windowId !== cur.id);
-  for (const t of tabs) await chrome.tabs.move(t.id, { windowId: cur.id, index: -1 });
-  return tabs.length;
+  let n = 0;
+  for (const t of tabs) if (t.incognito === cur.incognito) await chrome.tabs.move(t.id, { windowId: cur.id, index: -1 }).then(() => { n += 1; }, () => {});
+  return n;
 }

@@ -6,12 +6,15 @@ import { update, dayKey, daysAgo, deviceId } from '../../lib/store.js';
 import { allDevices } from '../../lib/sync.js';
 import { getSettings, get } from '../../lib/store.js';
 import { categoryOf, weekSummary } from '../../lib/smart.js';
+import { CATEGORIES, fromKey } from '../../lib/dev.js';
 
 const RANGES = [['today', 'Today'], ['yesterday', 'Yesterday'], ['7', '7 days'], ['30', '30 days'], ['90', '90 days'], ['year', 'This year'], ['all', 'All time'], ['custom', 'Custom']];
 let state = { range: '7', from: daysAgo(6), to: dayKey(), device: 'all', q: '', show: 25 };
 let data = {}; // day -> {domain: secs} (merged over selected devices)
+let devData = {}; // day -> {"kind|key" | "cat:<category>": secs}: developer time (shown only once there is some)
 
 export async function mount(el) {
+  cfgCache = null; // categories may have changed in Settings since the last visit
   el.innerHTML = `
     <header class="ins-h">
       <div class="seg" id="ranges">${RANGES.map(([k, l]) => `<button data-r="${k}">${l}</button>`).join('')}</div>
@@ -22,6 +25,8 @@ export async function mount(el) {
     </header>
     <div class="kpis big" id="kpis"></div>
     <section class="card"><h2>Productive vs distracting <span class="sp"></span><span class="small faint">edit categories in Settings</span></h2><div class="catbar" id="catbar"></div><div class="catlegend" id="catlegend"></div></section>
+    <section class="card" id="dev-sec" hidden><h2>Developer time <span class="sp"></span><button class="ghost small" id="standup" title="Yesterday and today's PRs, issues and tickets as Markdown">Copy standup</button></h2>
+      <div class="catbar" id="devbar"></div><div class="catlegend dev" id="devlegend"></div><div class="devwork" id="devwork"></div></section>
     <section class="card"><h2>Weekly review</h2><div class="review" id="review"></div></section>
     <section class="card"><h2>Time per <span id="bucket">day</span></h2><div class="chart" id="chart"></div></section>
     <section class="card"><h2>Last 12 months</h2><div class="heat" id="heat"></div><div class="small faint" id="heat-cap"></div></section>
@@ -32,11 +37,17 @@ export async function mount(el) {
     </section>`;
 
   $('#ranges').onclick = e => { const b = e.target.closest('[data-r]'); if (b) { setRange(b.dataset.r); render(); } };
-  $('#from').onchange = $('#to').onchange = () => { state.from = $('#from').value; state.to = $('#to').value; render(); };
+  $('#from').onchange = $('#to').onchange = () => {
+    const a = $('#from').value; const b = $('#to').value;
+    if (!a || !b) return;
+    [state.from, state.to] = a <= b ? [a, b] : [b, a];
+    render();
+  };
   $('#device').onchange = async e => { state.device = e.target.value; await load(); render(); };
   $('#site-q').oninput = e => { state.q = e.target.value.toLowerCase(); state.show = 25; renderSites(); };
   $('#more').onclick = () => { state.show += 50; renderSites(); };
   $('#csv').onclick = exportCsv;
+  $('#standup').onclick = copyStandup;
   $('#sites').onclick = async e => {
     const b = e.target.closest('[data-del]');
     if (b && await confirmBox(`Delete all history for ${b.dataset.del}?`, 'This removes it from every day on this device.')) {
@@ -48,7 +59,9 @@ export async function mount(el) {
   setRange(state.range);
   await load();
   render();
-  const iv = setInterval(async () => { await send({ type: 'flush' }); await load(); render(); }, 60000);
+  $('#device').value = state.device;
+  // keep "today" / "7 days" anchored to the current date past midnight
+  const iv = setInterval(async () => { await send({ type: 'flush' }); await load(); if (state.range !== 'custom') setRange(state.range); render(); }, 60000);
   return () => clearInterval(iv);
 }
 
@@ -74,6 +87,11 @@ async function load() {
       for (const [dom, s] of Object.entries(sites)) tgt[dom] = (tgt[dom] || 0) + s;
     }
   }
+  devData = {};
+  for (const [dev, days] of Object.entries(await allDevices('devUsage'))) {
+    if (state.device === 'this' && dev !== me) continue;
+    for (const [d, m] of Object.entries(days)) { const tgt = (devData[d] = devData[d] || {}); for (const [k, s] of Object.entries(m)) tgt[k] = (tgt[k] || 0) + s; }
+  }
   if (state.range === 'all') setRange('all');
 }
 
@@ -86,7 +104,50 @@ function daysBetween(a, b) {
   return out;
 }
 
-function render() { renderKpis(); renderCats(); renderChart(); renderHeat(); renderSites(); renderReview(); }
+function render() { renderKpis(); renderCats(); renderDev(); renderChart(); renderHeat(); renderSites(); renderReview(); }
+
+// ---------------- developer time ----------------
+const DEV_COLORS = { review: '#8ab4f8', planning: '#c58af9', ci: '#fdd663', code: '#81c995', docs: '#78d9ec', qa: '#f6aea9', ai: '#fcad70', local: '#aecbfa', tools: '#666' };
+function renderDev() {
+  const cats = {}; const work = {};
+  for (const [d, m] of Object.entries(devData)) if (inRange(d)) for (const [k, s] of Object.entries(m)) {
+    if (k.startsWith('cat:')) cats[k.slice(4)] = (cats[k.slice(4)] || 0) + s; else work[k] = (work[k] || 0) + s;
+  }
+  const total = Object.values(cats).reduce((a, b) => a + b, 0);
+  $('#dev-sec').hidden = !total && !Object.keys(work).length;
+  if ($('#dev-sec').hidden) return;
+  const cs = Object.entries(cats).sort((a, b) => b[1] - a[1]);
+  $('#devbar').innerHTML = cs.map(([k, v]) => `<i style="width:${(100 * v) / (total || 1)}%;background:${DEV_COLORS[k] || '#555'}" title="${esc(CATEGORIES[k] || k)}: ${dur(v)}"></i>`).join('');
+  $('#devlegend').innerHTML = cs.map(([k, v]) => `<span><i style="background:${DEV_COLORS[k] || '#555'}"></i>${esc(CATEGORIES[k] || k)} <b>${dur(v)}</b></span>`).join('');
+  // by repo (its PRs / issues / CI / browsing), then tickets, then local servers
+  const groups = {};
+  for (const [kk, s] of Object.entries(work)) {
+    const e = fromKey(kk);
+    const g = e.kind === 'ticket' ? 'Tickets' : e.kind === 'local' ? 'Local servers' : e.repo;
+    (groups[g] = groups[g] || { total: 0, items: [] }).total += s;
+    groups[g].items.push({ ...e, s });
+  }
+  const link = e => (e.url ? `<a href="${esc(e.url)}" target="_blank">${esc(e.label)}</a>` : esc(e.label));
+  const what = { pr: 'PR', issue: 'Issue', ci: 'CI', repo: 'Browsing', ticket: '', local: '' };
+  $('#devwork').innerHTML = Object.entries(groups).sort((a, b) => b[1].total - a[1].total).slice(0, 10).map(([g, { total: t, items }]) => `
+    <div class="devgrp"><div class="devg"><b>${esc(g)}</b><span class="faint">${dur(t)}</span></div>
+    ${items.sort((a, b) => b.s - a.s).slice(0, 6).map(e => `<div class="devi"><span class="faint">${what[e.kind] ?? ''}</span>${e.kind === 'repo' || e.kind === 'ci' ? '' : link(e)}<span class="sp"></span>${dur(e.s)}</div>`).join('')}</div>`).join('');
+}
+// "Yesterday / Today" as Markdown: PRs, issues and tickets with at least 2 minutes, most time first
+async function copyStandup() {
+  const today = dayKey();
+  const prev = Object.keys(devData).filter(d => d < today).sort().pop(); // last day you worked, e.g. Friday on a Monday
+  const part = (d, title) => {
+    const rows = Object.entries(devData[d] || {}).filter(([k, s]) => !k.startsWith('cat:') && s >= 120).map(([k, s]) => ({ ...fromKey(k), s }))
+      .filter(e => ['pr', 'issue', 'ticket'].includes(e.kind)).sort((a, b) => b.s - a.s).slice(0, 8);
+    return rows.length ? `**${title}**\n${rows.map(e => `- ${e.kind === 'pr' ? 'PR ' : e.kind === 'issue' ? 'Issue ' : ''}${e.url ? `[${e.label}](${e.url})` : e.label} · ${dur(e.s)}`).join('\n')}` : '';
+  };
+  const label = prev ? (prev === daysAgo(1) ? 'Yesterday' : new Date(prev + 'T12:00').toLocaleDateString([], { weekday: 'long' })) : '';
+  const text = [prev && part(prev, label), part(today, 'Today')].filter(Boolean).join('\n\n');
+  if (!text) return toast('No PRs, issues or tickets with time yet');
+  await navigator.clipboard.writeText(text);
+  toast('Standup copied');
+}
 
 let cfgCache = null;
 async function renderCats() {
@@ -196,8 +257,10 @@ function renderSites() {
 }
 
 function exportCsv() {
+  // quote every text cell; a leading = + - @ would run as a formula in spreadsheets
+  const cell = v => `"${String(v).replace(/^[=+\-@\t\r]/, "'$&").replace(/"/g, '""')}"`;
   const lines = ['date,site,seconds'];
-  for (const d of Object.keys(data).sort()) if (inRange(d)) for (const [dom, s] of Object.entries(data[d])) lines.push(`${d},${dom},${s}`);
+  for (const d of Object.keys(data).sort()) if (inRange(d)) for (const [dom, s] of Object.entries(data[d])) lines.push(`${d},${cell(dom)},${Math.round(Number(s) || 0)}`);
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([lines.join('\n')], { type: 'text/csv' }));
   a.download = `sumi-time-${state.from}_${state.to}.csv`;

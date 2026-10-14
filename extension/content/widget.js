@@ -3,8 +3,13 @@
 // minimise. Lives in a closed shadow root so pages cannot restyle it; reads only
 // Sumi's own storage, never the page.
 (() => {
-  if (window.__sumiWidget || window.top !== window) return;
-  window.__sumiWidget = true;
+  // re-injected after an extension update/reload: the old copy is orphaned (its chrome.* calls throw and its
+  // UI freezes), so replace it; a live copy (plain duplicate injection) is kept
+  const rt = chrome.runtime;
+  const alive = () => { try { return !!rt.id; } catch (e) { return false; } };
+  if (window.top !== window || (typeof window.__sumiWidget === 'function' && window.__sumiWidget())) return;
+  window.__sumiWidget = alive;
+  document.querySelectorAll('sumi-widget').forEach(e => e.remove());
 
   const host = document.createElement('sumi-widget');
   host.style.cssText = 'all: initial; position: fixed; z-index: 2147483647; right: 20px; bottom: 20px; display: none;';
@@ -32,7 +37,7 @@
   const box = root.querySelector('.w');
 
   let timer = null; let sw = null; let cfg = {}; let pos = null; let minimized = false;
-  const act = (type, action) => chrome.runtime.sendMessage({ type, action }).catch(() => {});
+  const act = (type, action) => { try { chrome.runtime.sendMessage({ type, action }).catch(() => {}); } catch (e) { /* extension reloaded */ } };
   const fmt = ms => {
     const s = Math.max(0, Math.floor(ms / 1000)); const h = Math.floor(s / 3600); const m = Math.floor((s % 3600) / 60); const x = s % 60;
     return h ? `${h}:${String(m).padStart(2, '0')}:${String(x).padStart(2, '0')}` : `${m}:${String(x).padStart(2, '0')}`;
@@ -68,16 +73,20 @@
     }
     box.innerHTML = rows.join('');
     box.classList.toggle('min', minimized);
+    if (!tick && !document.hidden) tick = setInterval(update, 250);
   }
-  // cheap per-second update of just the numbers
-  setInterval(() => {
-    if (host.style.display === 'none') return;
+  // cheap update of just the numbers; runs only while the widget is shown in a visible tab
+  let tick = 0;
+  function update() {
+    if (!alive()) { clearInterval(tick); host.remove(); return; }
+    if (host.style.display === 'none' || document.hidden) { clearInterval(tick); tick = 0; return; }
     const a = root.querySelector('[data-k=timer]'); if (a && timer) a.textContent = fmt(tLeft(timer));
     const b = root.querySelector('[data-k=sw]'); if (b && sw) b.textContent = fmt(swMs(sw));
-  }, 250);
+  }
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && alive()) render(); });
 
   function place() {
-    if (!pos) return;
+    if (!pos) { host.style.right = '20px'; host.style.bottom = '20px'; return; }   // also after "Reset widget position"
     const r = Math.min(Math.max(4, pos.right), window.innerWidth - 60);
     const b = Math.min(Math.max(4, pos.bottom), window.innerHeight - 40);
     host.style.right = r + 'px';

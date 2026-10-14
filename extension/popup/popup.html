@@ -4,46 +4,38 @@
   <meta charset="UTF-8">
   <link rel="stylesheet" href="/lib/ui.css">
   <style>
-    body { width: 400px; padding: 14px; }
-    .sp { flex: 1; }
-    .clockrow { display: flex; align-items: center; gap: 8px; }
-    .clockrow .v { font: 300 32px/1 var(--ui); font-variant-numeric: tabular-nums; }
-    .clockrow .m { font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
-    .clockrow button { padding: 6px 10px; }
-    hr { border: 0; border-top: 1px solid var(--line); margin: 12px 0; }
-    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-    .grid2 button { font-size: 12.5px; }
-    select { width: 100%; }
+    html { background: #000; }
+    /* search first; everything else is one or two rows. Tab tools live in the search (type "dup", "sleep", "video"...) */
+    body { width: 400px; max-height: 590px; padding: 12px; display: flex; flex-direction: column; gap: 8px; overflow: hidden; }
+    body > * { flex: none; }
+    #palette { flex: 1 1 auto; min-height: 120px; display: flex; flex-direction: column; }
+    #palette .pal { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+    #palette .pal-list { flex: 1 1 auto; min-height: 0; max-height: 300px; }
+    hr { border: 0; border-top: 1px solid var(--line); margin: 0; }
+    .r1 { display: grid; grid-template-columns: 1fr auto; gap: 6px; }
+    .r2 { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 6px; }
+    .r1 button, .r2 button { font-size: 12.5px; white-space: nowrap; }
+    .clk { font-variant-numeric: tabular-nums; min-width: 92px; }
+    .clk[hidden] { display: none; }
+    select { min-width: 0; width: 100%; font-size: 12.5px; }
+    .foot { display: flex; align-items: center; gap: 8px; }
+    .foot .small { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   </style>
 </head>
 <body>
   <div id="palette"></div>
   <hr>
-  <div class="clockrow"><div><div class="m" id="tm">Focus</div><div class="v" id="tv">25:00</div></div><span class="sp"></span>
-    <button class="primary" id="t-toggle">Start</button><button id="t-skip" title="Skip">⏭</button></div>
-  <div class="clockrow" style="margin-top:10px"><div><div class="m">Stopwatch</div><div class="v" id="sv">0:00</div></div><span class="sp"></span>
-    <button id="s-toggle">Start</button><button id="s-stop" title="Stop and save">■</button></div>
-  <div class="small muted" id="today" style="margin-top:8px"></div>
-  <hr>
-  <div class="small muted" style="margin-bottom:6px">Save this page for later</div>
-  <div class="grid2"><select id="lkind"><option value="">Auto (read / watch)</option><option value="read">Read</option><option value="watch">Watch</option><option value="paper">Paper</option><option value="listen">Listen</option></select>
-    <select id="ldue"><option value="">No deadline</option><option value="tonight">Tonight</option><option value="tomorrow">Tomorrow</option><option value="weekend">This weekend</option><option value="week">Within a week</option><option value="month">Within a month</option></select></div>
-  <button id="save-later" class="primary" style="width:100%;margin-top:6px">Save to Later</button>
-  <hr>
-  <div class="small muted" style="margin-bottom:6px">Save tabs to a collection</div>
-  <select id="target"></select>
-  <div class="grid2" style="margin-top:6px">
-    <button id="save-tab">Save this tab</button>
+  <div class="r1">
+    <button class="primary" id="save-later" title="Save this page to Later (Alt+Shift+L) · set a deadline in Sumi → Later">＋ Save to Later</button>
+    <div class="row" style="gap:6px"><button class="clk" id="t-toggle" title="Focus timer: start / pause (Alt+Shift+P)">▶ 25:00</button>
+      <button class="clk" id="s-toggle" title="Stopwatch: pause / resume (Alt+Shift+W)" hidden></button><button id="s-stop" title="Stop and save stopwatch" hidden>■</button></div>
+  </div>
+  <div class="r2">
+    <select id="target" title="Collection to save into"></select>
+    <button id="save-tab">Save tab</button>
     <button id="save-win">Save window</button>
   </div>
-  <hr>
-  <div class="grid2" id="tools">
-    <button data-t="dupes">Close duplicates</button>
-    <button data-t="sleep">Sleep inactive</button>
-    <button data-t="video" style="grid-column: span 2">Show / hide video progress on this page</button>
-    <button data-t="all" class="primary" style="grid-column: span 2">Save all windows (new space)</button>
-  </div>
-  <div class="row" style="margin-top:12px"><span class="small faint" id="site"></span><span class="sp"></span><button class="ghost" id="open">Open Sumi ↗</button></div>
+  <div class="foot"><span class="small faint" id="site"></span><button class="ghost small" id="open">Open Sumi ↗</button></div>
   <script type="module" src="popup.js"></script>
 </body>
 </html>

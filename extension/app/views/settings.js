@@ -38,8 +38,26 @@ export async function mount(el) {
       <fieldset><legend>Video progress</legend>
         <label class="ck"><input type="checkbox" name="videoProgress"> Show % watched, time left and end time on long videos</label>
         <label>Automatically for videos longer than <input type="number" name="videoAutoMin" min="1" max="600"> min</label>
-        <label class="ck"><input type="checkbox" name="videoAutoTrack"> Also track watch stats for every video that long (otherwise click ◉ Track on the ones you want)</label>
+        <label class="ck"><input type="checkbox" name="videoTrack"> Track time spent on videos longer than <input type="number" name="videoTrackMin" min="1" max="600"> min (Videos page: how long each one took you)</label>
         <p class="small faint">On any other video, open it from the Sumi popup, right-click the video, or set a shortcut at chrome://extensions/shortcuts. Click the % to shrink it, drag to move, ✕ hides it for that video.</p>
+      </fieldset>
+
+      <fieldset><legend>Daily rhythm</legend>
+        <label class="ck"><input type="checkbox" name="dailyPlan"> Plan the day on the first new tab (a few things + a focus goal), and Shut down in the evening</label>
+        <label class="ck"><input type="checkbox" name="intentGate"> Before opening a distracting site, ask what I'm there for, then allow 5 or 15 minutes</label>
+        <p class="small faint">Distracting sites are the list under Time awareness. "Snooze this tab" is in the right-click menu and the search; type "+ task" in the search to add a task, or "20 min" to see Later items that fit.</p>
+      </fieldset>
+
+      <fieldset><legend>Quicklinks (search box)</legend>
+        <label>One per line: <code>key = https://…{q}…</code> · type <code>gh acme/api</code> or <code>npm react</code> in the search</label>
+        <textarea name="quicklinks" rows="6" data-raw placeholder="jira = https://acme.atlassian.net/browse/{q}"></textarea>
+        <p class="small faint">Also in the search: <code>ENG-421</code>, <code>#482</code> / <code>pr 482</code> and <code>owner/repo</code> jump to that ticket, PR or repo (the open tab first). "Park this task" and "Copy … as Markdown" are search actions too.</p>
+      </fieldset>
+
+      <fieldset><legend>Later reminders</legend>
+        <label>"Keep reminding me" nudges only between <input type="number" name="nagFrom" min="0" max="23"> h and <input type="number" name="nagTo" min="1" max="24"> h</label>
+        <label class="ck"><input type="checkbox" name="nagSticky"> Keep nudges on screen until I act on them</label>
+        <p class="small faint">Turn nudges on per item in Later → ✎ Edit. They pause during focus sessions and while you are away, and stop when the item is done.</p>
       </fieldset>
 
       <fieldset><legend>Blocking during focus</legend>
@@ -105,14 +123,24 @@ export async function mount(el) {
     if (e.type === 'checkbox') e.checked = !!v; else e.value = Array.isArray(v) ? v.join('\n') : v;
   }
   const last = await get('lastSync', 0);
-  $('#last').textContent = acc?.local ? '' : last ? `Synced ${new Date(last).toLocaleString()}` : 'Not synced yet';
+  const syncErr = await get('syncError', null);
+  $('#last').textContent = acc?.local ? '' : syncErr ? `Sync failed: ${syncErr.message}` : last ? `Synced ${new Date(last).toLocaleString()}` : 'Not synced yet';
 
   form.addEventListener('change', async e => {
     const el2 = e.target;
     if (!el2.name) return;
-    let v = el2.type === 'checkbox' ? el2.checked : el2.type === 'number' ? Number(el2.value) : el2.value;
+    let v = el2.type === 'checkbox' ? el2.checked : el2.value;
+    if (el2.type === 'number') { // empty / out of range: clamp to the field's limits (or keep the old value)
+      const n = Math.round(Number(el2.value));
+      const old = (await getSettings())[el2.name];
+      v = el2.value === '' || !Number.isFinite(n) ? old : Math.min(Number(el2.max) || Infinity, Math.max(Number(el2.min) || 0, n));
+      el2.value = v;
+    }
     if (el2.tagName === 'TEXTAREA' && el2.hasAttribute('data-raw')) v = v.split('\n').map(s => s.trim()).filter(Boolean);
-    else if (el2.tagName === 'TEXTAREA') v = v.split(/[\n,]/).map(s => s.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/.*$/, '')).filter(Boolean);
+    else if (el2.tagName === 'TEXTAREA') { // domain lists: strip scheme, www, path, port, "*." ; one per line
+      v = [...new Set(v.split(/[\n,\s]+/).map(s => s.trim().toLowerCase().replace(/^[a-z]+:\/\//, '').replace(/^\*\./, '').replace(/^www\./, '').replace(/[/?#].*$/, '').replace(/:\d+$/, '').replace(/\.$/, '')).filter(Boolean))];
+      el2.value = v.join('\n');
+    }
     const next = await setSettings({ [el2.name]: v });
     if (el2.name === 'accent') applyAccent(next.accent);
     toast('Saved');
@@ -124,8 +152,8 @@ export async function mount(el) {
     $('#last').textContent = r.ok ? `Synced ${new Date().toLocaleString()}` : r.error;
   });
   $('#out').onclick = async () => {
-    if (acc?.local) { if (!configured()) return toast('This build has no Google client ID yet - see README'); await set('account', null); return; }
-    if (await confirmBox('Sign out?', 'Your data stays in your Google Drive and on this computer. Sign in again to keep syncing.', 'Sign out')) await signOut();
+    if (acc?.local) { if (!configured()) return toast('This build has no Google client ID yet - see README'); await set('account', null); return location.reload(); }
+    if (await confirmBox('Sign out?', 'Your data stays in your Google Drive and on this computer. Sign in again to keep syncing.', 'Sign out')) { await signOut(); location.reload(); }
   };
   $('#export').onclick = async () => downloadJson(`sumi-backup-${new Date().toISOString().slice(0, 10)}.json`, await exportAll());
   $('#import').onclick = async () => {

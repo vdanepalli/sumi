@@ -13,8 +13,11 @@ servers, has no database, and never receives any of your data.
 | Tasks | Task list |
 | Read / watch later items (URL, title, deadline, notes) | Later list and reminders |
 | Time per website: domain name + seconds per day | Insights |
+| Developer time: repository, pull request, issue and ticket names taken from page addresses (e.g. `acme/api#482`, `ENG-421`) + seconds per day | Insights → Developer time |
+| Daily plans (the items you pick, done or not, a shutdown note) | Today strip |
 | Focus sessions and stopwatch logs | Focus history |
-| Videos you chose to track (address, title, watch time, pauses, rewinds, parts seen) | Videos page |
+| Videos longer than the length you set, default 10 min (address, title, watch time, pauses, rewinds, parts seen) | Videos page |
+| Snoozed tabs (address, title, wake time) and intention-screen reasons (last 30 days) | Snooze; intention screen. These stay on this computer and are not synced |
 | Settings | Your preferences |
 
 It is stored in your browser (`chrome.storage.local`) and, once you sign in with
@@ -33,6 +36,12 @@ email and name are shown in Sumi so you know which account is in use.
 Nothing is sent to the developer or any third party. No analytics, advertising,
 tracking pixels, or data sales.
 
+## Reading-time estimates
+
+When you save the page you are on to Later, Sumi counts the words on it (or reads its
+video's length) on your computer to estimate how long it takes. Only the number of
+minutes is stored, never the page text.
+
 ## The floating widget
 
 To show the timer on every page, Sumi adds a small widget to web pages. It only
@@ -41,9 +50,9 @@ displays Sumi's own timer state; it does not read, collect or send page content.
 ## The video progress overlay
 
 On pages with a video, Sumi reads only that video's length, position and speed to
-show how much you have watched. Nothing is stored unless you choose **Track this
-video**: then Sumi keeps, for that video only, its address and title, time spent
-watching, pauses, rewinds, skips and which parts you have seen. This is stored and
+show how much you have watched. For videos longer than the length set in Settings
+(default 10 minutes; tracking can be turned off), Sumi keeps the video's address and
+title, time spent watching, pauses, rewinds, skips and which parts you have seen. This is stored and
 synced like the rest of your Sumi data (your browser and your own Google Drive), and
 you can stop tracking or delete it on the Videos page.
 
